@@ -2,39 +2,50 @@
 
 import type { BuiltinInterventionProps } from '@lobechat/types';
 import { Button, Flexbox, Input, Text, TextArea } from '@lobehub/ui';
-import { memo, useCallback, useMemo, useState } from 'react';
+import { Select } from '@lobehub/ui/base-ui';
+import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { AskUserQuestionArgs, InteractionField } from '../../../types';
-import SelectFieldInput, { getOtherKey } from './SelectFieldInput';
+import { useStyles } from './style';
 
 const FieldInput = memo<{
   field: InteractionField;
-  formData: Record<string, string | string[]>;
   onChange: (key: string, value: string | string[]) => void;
   onPressEnter?: () => void;
-}>(({ field, formData, onChange, onPressEnter }) => {
+  value?: string | string[];
+}>(({ field, value, onChange, onPressEnter }) => {
   switch (field.kind) {
     case 'textarea': {
       return (
         <TextArea
           autoSize={{ maxRows: 6, minRows: 2 }}
           placeholder={field.placeholder}
-          value={formData[field.key] as string}
+          value={value as string}
           onChange={(e) => onChange(field.key, e.target.value)}
         />
       );
     }
-    case 'select':
+    case 'select': {
+      return (
+        <Select
+          options={field.options?.map((o) => ({ label: o.label, value: o.value }))}
+          placeholder={field.placeholder}
+          style={{ width: '100%' }}
+          value={value as string}
+          onChange={(v) => onChange(field.key, v as string)}
+        />
+      );
+    }
     case 'multiselect': {
       return (
-        <SelectFieldInput
-          field={field}
-          otherValue={(formData[getOtherKey(field.key)] as string) ?? ''}
-          value={formData[field.key]}
-          onChange={onChange}
-          onOtherChange={onChange}
-          onPressEnter={onPressEnter}
+        <Select
+          mode="multiple"
+          options={field.options?.map((o) => ({ label: o.label, value: o.value }))}
+          placeholder={field.placeholder}
+          style={{ width: '100%' }}
+          value={value as string[]}
+          onChange={(v) => onChange(field.key, v as string[])}
         />
       );
     }
@@ -42,7 +53,7 @@ const FieldInput = memo<{
       return (
         <Input
           placeholder={field.placeholder}
-          value={formData[field.key] as string}
+          value={value as string}
           onChange={(e) => onChange(field.key, e.target.value)}
           onPressEnter={onPressEnter}
         />
@@ -51,62 +62,24 @@ const FieldInput = memo<{
   }
 });
 
-/** Check if a select/multiselect field has a valid value (preset or other) */
-const isSelectFieldFilled = (
-  field: InteractionField,
-  formData: Record<string, string | string[]>,
-): boolean => {
-  const presetValue = formData[field.key];
-  const otherValue = (formData[getOtherKey(field.key)] as string) ?? '';
-
-  if (field.kind === 'multiselect') {
-    const hasPresets = Array.isArray(presetValue) && presetValue.length > 0;
-    const hasOther = otherValue.trim().length > 0;
-    return hasPresets || hasOther;
-  }
-  // select
-  const hasPreset = typeof presetValue === 'string' && presetValue.length > 0;
-  const hasOther = otherValue.trim().length > 0;
-  return hasPreset || hasOther;
-};
-
 const AskUserQuestionIntervention = memo<BuiltinInterventionProps<AskUserQuestionArgs>>(
   ({ args, interactionMode, onInteractionAction }) => {
     const { t } = useTranslation('ui');
+    const { cx, styles } = useStyles();
     const { question } = args;
     const isCustom = interactionMode === 'custom';
 
-    const initialValues = useMemo(() => {
-      const values: Record<string, string | string[]> = {};
-      if (!question.fields) return values;
-
+    const initialValues: Record<string, string | string[]> = {};
+    if (question.fields) {
       for (const field of question.fields) {
-        if (field.value === undefined) continue;
-
-        if ((field.kind === 'select' || field.kind === 'multiselect') && field.options?.length) {
-          const optionValues = new Set(field.options.map((o) => o.value));
-
-          if (field.kind === 'multiselect' && Array.isArray(field.value)) {
-            const presets = field.value.filter((v) => optionValues.has(v));
-            const others = field.value.filter((v) => !optionValues.has(v));
-            if (presets.length > 0) values[field.key] = presets;
-            if (others.length > 0) values[getOtherKey(field.key)] = others.join(', ');
-          } else if (field.kind === 'select' && typeof field.value === 'string') {
-            if (optionValues.has(field.value)) {
-              values[field.key] = field.value;
-            } else {
-              values[getOtherKey(field.key)] = field.value;
-            }
-          }
-        } else {
-          values[field.key] = field.value;
-        }
+        if (field.value !== undefined) initialValues[field.key] = field.value;
       }
-      return values;
-    }, [question.fields]);
+    }
 
     const [formData, setFormData] = useState<Record<string, string | string[]>>(initialValues);
     const [submitting, setSubmitting] = useState(false);
+    const [escapeActive, setEscapeActive] = useState(false);
+    const [escapeText, setEscapeText] = useState('');
 
     const handleFieldChange = useCallback((key: string, value: string | string[]) => {
       setFormData((prev) => ({ ...prev, [key]: value }));
@@ -116,38 +89,32 @@ const AskUserQuestionIntervention = memo<BuiltinInterventionProps<AskUserQuestio
       if (!onInteractionAction) return;
       setSubmitting(true);
       try {
-        // Clean up empty values before submitting
-        const payload: Record<string, string | string[]> = {};
-        for (const [key, val] of Object.entries(formData)) {
-          if (Array.isArray(val) && val.length === 0) continue;
-          if (typeof val === 'string' && val.trim().length === 0) continue;
-          payload[key] = val;
+        if (escapeActive) {
+          await onInteractionAction({ payload: { __freeform__: escapeText }, type: 'submit' });
+        } else {
+          await onInteractionAction({ payload: formData, type: 'submit' });
         }
-        await onInteractionAction({ payload, type: 'submit' });
       } finally {
         setSubmitting(false);
       }
-    }, [formData, onInteractionAction]);
+    }, [escapeActive, escapeText, formData, onInteractionAction]);
 
     const handleSkip = useCallback(async () => {
       if (!onInteractionAction) return;
       await onInteractionAction({ type: 'skip' });
     }, [onInteractionAction]);
 
+    const handleEscapeToggle = useCallback(() => {
+      setEscapeActive((prev) => !prev);
+    }, []);
+
     const isFreeform = !question.fields || question.fields.length === 0;
 
-    const isSubmitDisabled = isFreeform
-      ? !(formData['__freeform__'] as string)?.trim()
-      : (question.fields?.some((f) => {
-          if (!f.required) return false;
-          if (f.kind === 'select' || f.kind === 'multiselect') {
-            return !isSelectFieldFilled(f, formData);
-          }
-          const val = formData[f.key];
-          if (typeof val === 'string') return val.trim().length === 0;
-          if (Array.isArray(val)) return val.length === 0;
-          return !val;
-        }) ?? false);
+    const isSubmitDisabled = escapeActive
+      ? !escapeText.trim()
+      : isFreeform
+        ? !formData['__freeform__']
+        : (question.fields?.some((f) => f.required && !formData[f.key]) ?? false);
 
     if (!isCustom) {
       return (
@@ -183,27 +150,61 @@ const AskUserQuestionIntervention = memo<BuiltinInterventionProps<AskUserQuestio
             onChange={(e) => handleFieldChange('__freeform__', e.target.value)}
           />
         ) : (
-          question.fields &&
-          question.fields.length > 0 && (
+          <>
+            {!escapeActive && (
+              <Flexbox gap={8}>
+                {question.fields!.map((field) => (
+                  <Flexbox gap={4} key={field.key}>
+                    <Text style={{ fontSize: 13 }}>
+                      {field.label}
+                      {field.required && <span style={{ color: 'red' }}> *</span>}
+                    </Text>
+                    <FieldInput
+                      field={field}
+                      value={formData[field.key]}
+                      onChange={handleFieldChange}
+                      onPressEnter={() => {
+                        if (!isSubmitDisabled) handleSubmit();
+                      }}
+                    />
+                  </Flexbox>
+                ))}
+              </Flexbox>
+            )}
+
+            {/* Escape hatch: bypass form, type freely */}
             <Flexbox gap={8}>
-              {question.fields.map((field) => (
-                <Flexbox gap={4} key={field.key}>
-                  <Text style={{ fontSize: 13 }}>
-                    {field.label}
-                    {field.required && <span style={{ color: 'red' }}> *</span>}
-                  </Text>
-                  <FieldInput
-                    field={field}
-                    formData={formData}
-                    onChange={handleFieldChange}
-                    onPressEnter={() => {
-                      if (!isSubmitDisabled) handleSubmit();
-                    }}
-                  />
-                </Flexbox>
-              ))}
+              <div
+                aria-checked={escapeActive}
+                className={cx(styles.option, escapeActive && styles.optionSelected)}
+                role="checkbox"
+                tabIndex={0}
+                onClick={handleEscapeToggle}
+                onKeyDown={(e) => {
+                  if (e.key === ' ' || e.key === 'Enter') {
+                    e.preventDefault();
+                    handleEscapeToggle();
+                  }
+                }}
+              >
+                <div
+                  className={cx(
+                    styles.indicator,
+                    styles.indicatorCheckbox,
+                    escapeActive && styles.indicatorCheckboxSelected,
+                  )}
+                />
+                <span className={styles.label}>{t('form.other')}</span>
+              </div>
+              {escapeActive && (
+                <TextArea
+                  autoSize={{ maxRows: 6, minRows: 2 }}
+                  value={escapeText}
+                  onChange={(e) => setEscapeText(e.target.value)}
+                />
+              )}
             </Flexbox>
-          )
+          </>
         )}
         <Flexbox horizontal gap={8} justify="flex-end">
           <Button onClick={handleSkip}>{t('form.skip')}</Button>
