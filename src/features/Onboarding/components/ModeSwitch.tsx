@@ -1,13 +1,13 @@
 'use client';
 
 import { Flexbox, Segmented, Text } from '@lobehub/ui';
-import { createStyles } from 'antd-style';
+import { createStaticStyles, cx } from 'antd-style';
 import type { CSSProperties, ReactNode } from 'react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate } from 'react-router-dom';
 
-const useStyles = createStyles(({ css, token }) => ({
+const styles = createStaticStyles(({ css, cssVar }) => ({
   anchor: css`
     position: fixed;
     z-index: 10;
@@ -31,21 +31,21 @@ const useStyles = createStyles(({ css, token }) => ({
 
     padding-block: 8px;
     padding-inline: 12px;
-    border: 1px solid color-mix(in srgb, ${token.colorBorderSecondary} 60%, transparent);
+    border: 1px solid color-mix(in srgb, ${cssVar.colorBorderSecondary} 60%, transparent);
     border-radius: 999px;
 
-    background: color-mix(in srgb, ${token.colorBgElevated} 75%, transparent);
+    background: color-mix(in srgb, ${cssVar.colorBgElevated} 75%, transparent);
     backdrop-filter: blur(16px) saturate(1.2);
-    box-shadow: ${token.boxShadowSecondary};
+    box-shadow: ${cssVar.boxShadowSecondary};
   `,
   segmentedGlass: css`
     padding: 4px;
-    border: 1px solid color-mix(in srgb, ${token.colorBorderSecondary} 60%, transparent);
+    border: 1px solid color-mix(in srgb, ${cssVar.colorBorderSecondary} 60%, transparent);
     border-radius: 999px;
 
-    background: color-mix(in srgb, ${token.colorBgElevated} 75%, transparent);
+    background: color-mix(in srgb, ${cssVar.colorBgElevated} 75%, transparent);
     backdrop-filter: blur(16px) saturate(1.2);
-    box-shadow: ${token.boxShadowSecondary};
+    box-shadow: ${cssVar.boxShadowSecondary};
   `,
 }));
 
@@ -58,7 +58,6 @@ interface ModeSwitchProps {
 
 const ModeSwitch = memo<ModeSwitchProps>(({ actions, className, showLabel = false, style }) => {
   const { t } = useTranslation('onboarding');
-  const { styles, cx } = useStyles();
   const location = useLocation();
   const navigate = useNavigate();
 
