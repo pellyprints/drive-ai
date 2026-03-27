@@ -116,6 +116,12 @@ const SelectFieldInput = memo<SelectFieldInputProps>(
           role={itemRole}
           tabIndex={0}
           onClick={handleOtherRowClick}
+          onKeyDown={(e) => {
+            if (e.key === ' ' || e.key === 'Enter') {
+              e.preventDefault();
+              otherInputRef.current?.focus();
+            }
+          }}
         >
           <div
             className={cx(
@@ -125,7 +131,7 @@ const SelectFieldInput = memo<SelectFieldInputProps>(
                 (isMulti ? styles.indicatorCheckboxSelected : styles.indicatorSelected),
             )}
           />
-          <span className={styles.label} style={{ flexShrink: 1, minWidth: 'fit-content' }}>
+          <span className={styles.label} style={{ flex: '0 0 auto' }}>
             {t('form.other')}
           </span>
           <input
