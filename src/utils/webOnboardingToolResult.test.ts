@@ -34,7 +34,7 @@ describe('web onboarding tool result helpers', () => {
     expect(message).toContain('Structured fields still needed: interests.');
     expect(message).toContain('Phase: Discovery');
     expect(message).toContain(
-      'Questioning rule: for any direct question that expects user input, call lobe-user-interaction askUserQuestion by default.',
+      'Questioning rule: use lobe-user-interaction askUserQuestion for structured collection or explicit UI input. For natural exploratory questions, plain text is allowed.',
     );
   });
 

@@ -44,7 +44,7 @@ export const formatWebOnboardingStateMessage = (state: UserAgentOnboardingContex
   const phaseGuidance = PHASE_GUIDANCE[state.phase] || '';
   const parts: string[] = [
     phaseGuidance,
-    'Questioning rule: for any direct question that expects user input, call lobe-user-interaction askUserQuestion by default.',
+    'Questioning rule: use lobe-user-interaction askUserQuestion for structured collection or explicit UI input. For natural exploratory questions, plain text is allowed.',
   ];
 
   if (state.remainingDiscoveryExchanges !== undefined && state.remainingDiscoveryExchanges > 0) {

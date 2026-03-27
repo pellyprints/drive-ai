@@ -19,6 +19,7 @@ export default {
   'emojiPicker.upload': 'Upload',
   'emojiPicker.uploadBtn': 'Crop and upload',
   'form.other': 'Or type directly',
+  'form.otherBack': 'Back to options',
   'form.reset': 'Reset',
   'form.skip': 'Skip',
   'form.submit': 'Submit',

@@ -65,7 +65,7 @@ const FieldInput = memo<{
 const AskUserQuestionIntervention = memo<BuiltinInterventionProps<AskUserQuestionArgs>>(
   ({ args, interactionMode, onInteractionAction }) => {
     const { t } = useTranslation('ui');
-    const { cx, styles } = useStyles();
+    const { styles } = useStyles();
     const { question } = args;
     const isCustom = interactionMode === 'custom';
 
@@ -173,37 +173,22 @@ const AskUserQuestionIntervention = memo<BuiltinInterventionProps<AskUserQuestio
             )}
 
             {/* Escape hatch: bypass form, type freely */}
-            <Flexbox gap={8}>
-              <div
-                aria-checked={escapeActive}
-                className={cx(styles.option, escapeActive && styles.optionSelected)}
-                role="checkbox"
-                tabIndex={0}
-                onClick={handleEscapeToggle}
-                onKeyDown={(e) => {
-                  if (e.key === ' ' || e.key === 'Enter') {
-                    e.preventDefault();
-                    handleEscapeToggle();
-                  }
-                }}
-              >
-                <div
-                  className={cx(
-                    styles.indicator,
-                    styles.indicatorCheckbox,
-                    escapeActive && styles.indicatorCheckboxSelected,
-                  )}
-                />
-                <span className={styles.label}>{t('form.other')}</span>
-              </div>
-              {escapeActive && (
+            {escapeActive ? (
+              <Flexbox gap={8}>
+                <Text className={styles.escapeLink} type="secondary" onClick={handleEscapeToggle}>
+                  ← {t('form.otherBack')}
+                </Text>
                 <TextArea
                   autoSize={{ maxRows: 6, minRows: 2 }}
                   value={escapeText}
                   onChange={(e) => setEscapeText(e.target.value)}
                 />
-              )}
-            </Flexbox>
+              </Flexbox>
+            ) : (
+              <Text className={styles.escapeLink} type="secondary" onClick={handleEscapeToggle}>
+                {t('form.other')} →
+              </Text>
+            )}
           </>
         )}
         <Flexbox horizontal gap={8} justify="flex-end">
