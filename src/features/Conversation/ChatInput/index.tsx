@@ -18,7 +18,8 @@ import { useChatStore } from '@/store/chat';
 import { fileChatSelectors, useFileStore } from '@/store/file';
 
 import WideScreenContainer from '../../WideScreenContainer';
-import { messageStateSelectors, useConversationStore } from '../store';
+import InterventionBar from '../InterventionBar';
+import { dataSelectors, messageStateSelectors, useConversationStore } from '../store';
 
 export interface ChatInputProps {
   /**
@@ -118,6 +119,10 @@ const ChatInput = memo<ChatInputProps>(
     // Loading state from ConversationStore (bridged from ChatStore)
     const isInputLoading = useConversationStore(messageStateSelectors.isInputLoading);
 
+    // Pending interventions
+    const pendingInterventions = useConversationStore(dataSelectors.pendingInterventions);
+    const hasPendingInterventions = pendingInterventions.length > 0;
+
     // Send message error from ConversationStore
     const sendMessageErrorMsg = useConversationStore(messageStateSelectors.sendMessageError);
     const clearSendMessageError = useChatStore((s) => s.clearSendMessageError);
@@ -178,24 +183,30 @@ const ChatInput = memo<ChatInputProps>(
 
     const defaultContent = (
       <WideScreenContainer style={skipScrollMarginWithList ? { marginTop: -12 } : undefined}>
-        {sendMessageErrorMsg && (
-          <Flexbox paddingBlock={'0 6px'} paddingInline={12}>
-            <Alert
-              closable
-              title={t('input.errorMsg', { errorMsg: sendMessageErrorMsg })}
-              type={'secondary'}
-              onClose={clearSendMessageError}
+        {hasPendingInterventions ? (
+          <InterventionBar interventions={pendingInterventions} />
+        ) : (
+          <>
+            {sendMessageErrorMsg && (
+              <Flexbox paddingBlock={'0 6px'} paddingInline={12}>
+                <Alert
+                  closable
+                  title={t('input.errorMsg', { errorMsg: sendMessageErrorMsg })}
+                  type={'secondary'}
+                  onClose={clearSendMessageError}
+                />
+              </Flexbox>
+            )}
+            <DesktopChatInput
+              actionBarStyle={actionBarStyle}
+              borderRadius={12}
+              extraActionItems={extraActionItems}
+              leftContent={leftContent}
+              sendAreaPrefix={sendAreaPrefix}
+              showRuntimeConfig={showRuntimeConfig}
             />
-          </Flexbox>
+          </>
         )}
-        <DesktopChatInput
-          actionBarStyle={actionBarStyle}
-          borderRadius={12}
-          extraActionItems={extraActionItems}
-          leftContent={leftContent}
-          sendAreaPrefix={sendAreaPrefix}
-          showRuntimeConfig={showRuntimeConfig}
-        />
       </WideScreenContainer>
     );
 
