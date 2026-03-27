@@ -34,7 +34,7 @@ const InterventionBar = memo<InterventionBarProps>(({ interventions }) => {
   if (!activeIntervention) return null;
 
   return (
-    <div className={styles.container}>
+    <div data-intervention-bar className={styles.container}>
       {interventions.length > 1 && (
         <InterventionTabBar
           activeIndex={activeIndex}
