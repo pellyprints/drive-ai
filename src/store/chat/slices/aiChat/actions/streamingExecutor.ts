@@ -24,6 +24,7 @@ import { type ResolvedAgentConfig } from '@/services/chat/mecha';
 import { resolveAgentConfig } from '@/services/chat/mecha';
 import { localFileService } from '@/services/electron/localFileService';
 import { messageService } from '@/services/message';
+import { mergeQueuedMessages } from '@/services/messageQueue';
 import { getAgentStoreState } from '@/store/agent';
 import { agentSelectors } from '@/store/agent/selectors';
 import { createAgentExecutors } from '@/store/chat/agents/createAgentExecutors';
@@ -486,6 +487,9 @@ export class StreamingExecutorActionImpl {
       nextContext.phase,
     );
 
+    // Compute contextKey for message queue (per-context, not per-operation)
+    const contextKey = messageKey;
+
     // Execute the agent runtime loop
     let stepCount = 0;
     while (state.status !== 'done' && state.status !== 'error') {
@@ -506,6 +510,52 @@ export class StreamingExecutorActionImpl {
       }
 
       stepCount++;
+
+      // ━━━ Message Queue Checkpoint (Path A) ━━━
+      // Between steps, drain queued messages and inject into agent state.
+      // The next LLM call will see the new user input.
+      const queuedMessages = this.#get().drainQueuedMessages(contextKey);
+      if (queuedMessages.length > 0) {
+        const merged = mergeQueuedMessages(queuedMessages);
+        log(
+          '[internal_execAgentRuntime] Injecting %d queued messages (merged content length: %d)',
+          queuedMessages.length,
+          merged.content.length,
+        );
+
+        // Find the last message to use as parentId
+        const currentMessages = this.#get().messagesMap[messageKey] || [];
+        const lastMsg = currentMessages.at(-1);
+        const parentId = lastMsg?.id;
+
+        // Persist the merged user message to database
+        const createResult = await this.#get().optimisticCreateMessage(
+          {
+            content: merged.content,
+            role: 'user' as const,
+            agentId: context.agentId,
+            topicId: context.topicId ?? undefined,
+            threadId: context.threadId ?? undefined,
+            parentId,
+            files: merged.files.length > 0 ? merged.files : undefined,
+          },
+          { operationId },
+        );
+
+        if (createResult) {
+          state = {
+            ...state,
+            messages: [...state.messages, { content: merged.content, role: 'user' as const }],
+          };
+
+          await this.#get().refreshMessages(context);
+
+          log(
+            '[internal_execAgentRuntime] Queued message injected, state.messages count: %d',
+            state.messages.length,
+          );
+        }
+      }
 
       // Compute step context from current db messages before each step
       // Use dbMessagesMap which contains persisted state (including pluginState.todos)
@@ -656,6 +706,38 @@ export class StreamingExecutorActionImpl {
       }
 
       log('[internal_execAgentRuntime] afterCompletion callbacks executed');
+    }
+
+    // ━━━ Message Queue Post-Completion (Path B) ━━━
+    // If the loop finished (done) and queue still has messages (enqueued during the
+    // last step), complete this operation and trigger a new sendMessage.
+    const remainingQueued = this.#get().drainQueuedMessages(contextKey);
+    if (remainingQueued.length > 0 && state.status === 'done') {
+      const merged = mergeQueuedMessages(remainingQueued);
+      log(
+        '[internal_execAgentRuntime] Path B: %d queued messages after completion, triggering new sendMessage',
+        remainingQueued.length,
+      );
+
+      // Complete current operation first
+      this.#get().completeOperation(operationId);
+
+      // Mark unread completion
+      const completedOp = this.#get().operations[operationId];
+      if (completedOp?.context.agentId) {
+        this.#get().markUnreadCompleted(completedOp.context.agentId, completedOp.context.topicId);
+      }
+
+      // Trigger new sendMessage to process the queued content.
+      // This will create a new operation (sendMessage → execAgentRuntime).
+      log('[internal_execAgentRuntime] Path B: calling sendMessage with queued content');
+      try {
+        await this.#get().sendMessage({ message: merged.content, context });
+      } catch (e) {
+        console.error('[internal_execAgentRuntime] Path B sendMessage failed:', e);
+      }
+
+      return; // Skip the normal completion below
     }
 
     // Complete operation based on final state

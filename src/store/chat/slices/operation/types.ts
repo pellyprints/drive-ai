@@ -182,6 +182,17 @@ export interface Operation {
 }
 
 /**
+ * Queued message waiting to be injected into agent runtime
+ */
+export interface QueuedMessage {
+  content: string;
+  createdAt: number;
+  files?: string[];
+  id: string;
+  interruptMode: 'soft' | 'hard';
+}
+
+/**
  * Operation filter for querying operations
  */
 export interface OperationFilter {

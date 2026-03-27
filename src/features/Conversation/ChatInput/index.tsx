@@ -19,6 +19,7 @@ import { fileChatSelectors, useFileStore } from '@/store/file';
 
 import WideScreenContainer from '../../WideScreenContainer';
 import { messageStateSelectors, useConversationStore } from '../store';
+import QueueTray from './QueueTray';
 
 export interface ChatInputProps {
   /**
@@ -129,7 +130,8 @@ const ChatInput = memo<ChatInputProps>(
 
     // Computed state
     const isInputEmpty = !inputMessage.trim() && fileList.length === 0 && contextList.length === 0;
-    const disabled = isInputEmpty || isUploadingFiles || isInputLoading;
+    // Input stays enabled during agent execution — messages are queued
+    const disabled = isInputEmpty || isUploadingFiles;
 
     // Send handler - gets message, clears editor immediately, then sends
     const handleSend: SendButtonHandler = useCallback(
@@ -140,7 +142,7 @@ const ChatInput = memo<ChatInputProps>(
         const currentIsUploading = fileChatSelectors.isUploadingFiles(fileStore);
         const currentContextList = fileChatSelectors.chatContextSelections(fileStore);
 
-        if (currentIsUploading || isInputLoading) return;
+        if (currentIsUploading) return;
 
         // Get content before clearing
         const message = getMarkdownContent();
@@ -166,7 +168,7 @@ const ChatInput = memo<ChatInputProps>(
         // Fire and forget - send with captured message
         await sendMessage({ editorData, files: currentFileList, message, pageSelections });
       },
-      [isInputLoading, sendMessage],
+      [sendMessage],
     );
 
     const sendButtonProps: SendButtonProps = {
@@ -188,6 +190,7 @@ const ChatInput = memo<ChatInputProps>(
             />
           </Flexbox>
         )}
+        <QueueTray />
         <DesktopChatInput
           actionBarStyle={actionBarStyle}
           borderRadius={12}
