@@ -9,131 +9,207 @@ Use the `agent-browser` CLI to automate and test the LobeHub desktop Electron ap
 
 ## Prerequisites
 
-1. **agent-browser CLI** is installed globally (`agent-browser --version` to verify)
-2. **Electron app** must be running with remote debugging enabled
+- `agent-browser` CLI installed globally (`agent-browser --version`)
+- Working directory must be `apps/desktop/` when starting Electron
 
-## Starting the Electron App for Testing
+## Quick Start
 
 ```bash
-# Kill any existing instance
+# 1. Kill existing instances
 pkill -f "Electron" 2> /dev/null
 pkill -f "electron-vite" 2> /dev/null
+pkill -f "agent-browser" 2> /dev/null
+sleep 3
 
-# Start desktop dev with remote debugging
-cd apps/desktop && ELECTRON_ENABLE_LOGGING=1 npx electron-vite dev -- --remote-debugging-port=9222
+# 2. Start Electron with CDP (MUST cd to apps/desktop first)
+cd apps/desktop && ELECTRON_ENABLE_LOGGING=1 npx electron-vite dev -- --remote-debugging-port=9222 > /tmp/electron-dev.log 2>&1 &
+
+# 3. Wait for startup (poll for "starting electron" in logs)
+for i in $(seq 1 12); do
+  sleep 5
+  if strings /tmp/electron-dev.log 2> /dev/null | grep -q "starting electron"; then
+    echo "ready"
+    break
+  fi
+done
+
+# 4. Wait for renderer to load, then connect
+sleep 15 && agent-browser --cdp 9222 wait 3000
 ```
 
-Or from project root:
-
-```bash
-ELECTRON_ARGS="--remote-debugging-port=9222" bun run dev:desktop
-```
-
-Wait for `[Browser] initUrl` in logs before connecting.
+**Critical:** `npx electron-vite dev` MUST run from `apps/desktop/` directory, not project root. Running from root will fail silently (no `initUrl` in logs).
 
 ## Connecting to Electron
 
 ```bash
-# Auto-detect and connect to the Electron app
-agent-browser --cdp 9222 snapshot -i
-
-# Or use auto-connect
-agent-browser --auto-connect snapshot -i
+agent-browser --cdp 9222 snapshot -i    # Interactive elements only
+agent-browser --cdp 9222 snapshot -i -C # Include contenteditable elements
 ```
 
-## Core Workflow: Snapshot → Interact → Verify
+Always use `--cdp 9222`. The `--auto-connect` flag is unreliable.
 
-### Step 1: Take a snapshot to see the current state
+## Core Workflow
+
+### 1. Snapshot → Find Elements
 
 ```bash
 agent-browser --cdp 9222 snapshot -i
 ```
 
-This returns element refs like `@e1`, `@e2` etc. **Refs are ephemeral** — re-snapshot after any page change.
+Returns element refs like `@e1`, `@e2`. **Refs are ephemeral** — re-snapshot after any page change (click, navigation, HMR).
 
-### Step 2: Interact with elements
+### 2. Interact
 
 ```bash
-agent-browser --cdp 9222 click @e5       # Click an element
-agent-browser --cdp 9222 fill @e3 "text" # Fill a text input
-agent-browser --cdp 9222 type @e3 "text" # Type character by character
-agent-browser --cdp 9222 press Enter     # Press a key
-agent-browser --cdp 9222 scroll down 500 # Scroll
+agent-browser --cdp 9222 click @e5
+agent-browser --cdp 9222 type @e3 "text" # Character by character (for contenteditable)
+agent-browser --cdp 9222 fill @e3 "text" # Bulk fill (for regular inputs)
+agent-browser --cdp 9222 press Enter
+agent-browser --cdp 9222 scroll down 500
 ```
 
-### Step 3: Wait for state changes
+### 3. Wait
 
 ```bash
 agent-browser --cdp 9222 wait 2000               # Wait ms
 agent-browser --cdp 9222 wait --load networkidle # Wait for network
-agent-browser --cdp 9222 wait @e1                # Wait for element
-agent-browser --cdp 9222 wait --url "**/chat"    # Wait for URL
 ```
 
-### Step 4: Take screenshot for visual verification
+Avoid `agent-browser wait` for long durations (>30s) — it blocks the daemon. Use `sleep N` in bash instead, then take a new snapshot/screenshot.
+
+### 4. Screenshot & Verify
 
 ```bash
-agent-browser --cdp 9222 screenshot            # Current viewport
-agent-browser --cdp 9222 screenshot --full     # Full page
-agent-browser --cdp 9222 screenshot --annotate # With element annotations
-```
-
-Screenshot images are saved to the current directory and can be read with the `Read` tool.
-
-### Step 5: Get text/data for assertions
-
-```bash
-agent-browser --cdp 9222 get text @e1 # Get text content
+agent-browser --cdp 9222 screenshot   # Save to ~/.agent-browser/tmp/screenshots/
+agent-browser --cdp 9222 get text @e1 # Get element text
 agent-browser --cdp 9222 get url      # Get current URL
-agent-browser --cdp 9222 get title    # Get page title
 ```
 
-## Common Test Patterns
+Read screenshots with the `Read` tool for visual verification.
 
-### Navigate to a specific agent chat
-
-```bash
-agent-browser --cdp 9222 snapshot -i
-# Find the agent in sidebar and click it
-agent-browser --cdp 9222 click @e<sidebar-agent-ref>
-agent-browser --cdp 9222 wait --load networkidle
-agent-browser --cdp 9222 snapshot -i
-```
-
-### Send a chat message
-
-```bash
-agent-browser --cdp 9222 snapshot -i
-# Find the contenteditable chat input
-agent-browser --cdp 9222 click @e<input-ref>
-agent-browser --cdp 9222 type @e<input-ref> "Hello"
-agent-browser --cdp 9222 press Enter
-agent-browser --cdp 9222 wait 3000
-agent-browser --cdp 9222 snapshot -i
-```
-
-### Verify element exists/text content
-
-```bash
-agent-browser --cdp 9222 snapshot -i
-# Check output for expected text/elements
-agent-browser --cdp 9222 get text @e<target-ref>
-```
-
-### Run JavaScript in the app context
+### 5. Evaluate JavaScript
 
 ```bash
 agent-browser --cdp 9222 eval "document.title"
-agent-browser --cdp 9222 eval --stdin << 'EOF'
-JSON.stringify(Object.keys(window.__ZUSTAND_STORES__ || {}))
-EOF
 ```
 
-## Tips
+For multi-line JS, use `--stdin`:
 
-- **Always re-snapshot** after clicking, navigating, or waiting — refs become stale
-- **Use `--cdp 9222`** consistently for all commands when testing the Electron app
-- **Chain commands** with `&&` only when you don't need intermediate output
-- **Take screenshots** at key points for visual verification
-- **Close when done**: `agent-browser --cdp 9222 close` (optional, doesn't kill Electron)
-- For **rich text editors** (contenteditable), use `type` instead of `fill`
+```bash
+agent-browser --cdp 9222 eval --stdin << 'EVALEOF'
+(function() {
+  var chat = window.__LOBE_STORES.chat();
+  return JSON.stringify({
+    totalOps: Object.keys(chat.operations).length,
+    queue: chat.queuedMessages,
+  });
+})()
+EVALEOF
+```
+
+## LobeHub-Specific Patterns
+
+### Access Zustand Store State
+
+The app exposes stores via `window.__LOBE_STORES` (dev mode only):
+
+```bash
+agent-browser --cdp 9222 eval --stdin << 'EVALEOF'
+(function() {
+  var chat = window.__LOBE_STORES.chat();
+  var ops = Object.values(chat.operations);
+  return JSON.stringify({
+    ops: ops.map(function(o) { return { type: o.type, status: o.status }; }),
+    activeAgent: chat.activeAgentId,
+    activeTopic: chat.activeTopicId,
+  });
+})()
+EVALEOF
+```
+
+### Find the Chat Input
+
+The chat input is a contenteditable div. Regular `snapshot -i` won't find it — use `-C`:
+
+```bash
+agent-browser --cdp 9222 snapshot -i -C 2>&1 | grep "editable"
+# Output: - generic [ref=e48] editable [contenteditable]:
+```
+
+### Navigate to an Agent
+
+```bash
+# Snapshot to find agent links in sidebar
+agent-browser --cdp 9222 snapshot -i 2>&1 | grep -i "agent-name"
+# Click the agent link
+agent-browser --cdp 9222 click @e<ref>
+agent-browser --cdp 9222 wait 2000
+```
+
+### Send a Chat Message
+
+```bash
+# 1. Find contenteditable input
+agent-browser --cdp 9222 snapshot -i -C 2>&1 | grep "editable"
+# 2. Click, type, send
+agent-browser --cdp 9222 click @e<ref>
+agent-browser --cdp 9222 type @e<ref> "Hello world"
+agent-browser --cdp 9222 press Enter
+```
+
+### Wait for Agent to Complete
+
+Don't use `agent-browser wait` for long AI generation. Use `sleep` + screenshot:
+
+```bash
+sleep 60 && agent-browser --cdp 9222 scroll down 5000 && agent-browser --cdp 9222 screenshot
+```
+
+Or poll the store for operation status:
+
+```bash
+agent-browser --cdp 9222 eval --stdin << 'EVALEOF'
+(function() {
+  var chat = window.__LOBE_STORES.chat();
+  var ops = Object.values(chat.operations);
+  var running = ops.filter(function(o) { return o.status === 'running'; });
+  return running.length === 0 ? 'done' : 'running: ' + running.length;
+})()
+EVALEOF
+```
+
+### Install Error Interceptor
+
+Capture `console.error` from the app for debugging:
+
+```bash
+agent-browser --cdp 9222 eval --stdin << 'EVALEOF'
+(function() {
+  window.__CAPTURED_ERRORS = [];
+  var orig = console.error;
+  console.error = function() {
+    var msg = Array.from(arguments).map(function(a) {
+      if (a instanceof Error) return a.message;
+      return typeof a === 'object' ? JSON.stringify(a) : String(a);
+    }).join(' ');
+    window.__CAPTURED_ERRORS.push(msg);
+    orig.apply(console, arguments);
+  };
+  return 'installed';
+})()
+EVALEOF
+
+# Later, check captured errors:
+agent-browser --cdp 9222 eval "JSON.stringify(window.__CAPTURED_ERRORS)"
+```
+
+## Gotchas
+
+- **`npx electron-vite dev` must run from `apps/desktop/`** — running from project root fails silently
+- **HMR invalidates everything** — after code changes, refs break, page may crash. Re-snapshot or restart Electron
+- **`agent-browser wait` blocks the daemon** — for waits >30s, use bash `sleep` instead
+- **Daemon can get stuck** — if commands hang, `pkill -f agent-browser` to reset the daemon
+- **`snapshot -i` doesn't find contenteditable** — always use `snapshot -i -C` to find rich text editors
+- **`fill` doesn't work on contenteditable** — use `type` for the chat input
+- **Screenshots go to `~/.agent-browser/tmp/screenshots/`** — read them with the `Read` tool
+- **Store is at `window.__LOBE_STORES`** not `window.__ZUSTAND_STORES__` — use `.chat()` to get current state
