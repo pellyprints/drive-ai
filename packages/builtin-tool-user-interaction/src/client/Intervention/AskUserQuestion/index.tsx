@@ -2,49 +2,39 @@
 
 import type { BuiltinInterventionProps } from '@lobechat/types';
 import { Button, Flexbox, Input, Text, TextArea } from '@lobehub/ui';
-import { Select } from '@lobehub/ui/base-ui';
-import { memo, useCallback, useState } from 'react';
+import { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { AskUserQuestionArgs, InteractionField } from '../../../types';
+import SelectFieldInput, { getOtherKey } from './SelectFieldInput';
 
 const FieldInput = memo<{
   field: InteractionField;
+  formData: Record<string, string | string[]>;
   onChange: (key: string, value: string | string[]) => void;
   onPressEnter?: () => void;
-  value?: string | string[];
-}>(({ field, value, onChange, onPressEnter }) => {
+}>(({ field, formData, onChange, onPressEnter }) => {
   switch (field.kind) {
     case 'textarea': {
       return (
         <TextArea
           autoSize={{ maxRows: 6, minRows: 2 }}
           placeholder={field.placeholder}
-          value={value as string}
+          value={formData[field.key] as string}
           onChange={(e) => onChange(field.key, e.target.value)}
         />
       );
     }
-    case 'select': {
-      return (
-        <Select
-          options={field.options?.map((o) => ({ label: o.label, value: o.value }))}
-          placeholder={field.placeholder}
-          style={{ width: '100%' }}
-          value={value as string}
-          onChange={(v) => onChange(field.key, v as string)}
-        />
-      );
-    }
+    case 'select':
     case 'multiselect': {
       return (
-        <Select
-          mode="multiple"
-          options={field.options?.map((o) => ({ label: o.label, value: o.value }))}
-          placeholder={field.placeholder}
-          style={{ width: '100%' }}
-          value={value as string[]}
-          onChange={(v) => onChange(field.key, v as string[])}
+        <SelectFieldInput
+          field={field}
+          otherValue={(formData[getOtherKey(field.key)] as string) ?? ''}
+          value={formData[field.key]}
+          onChange={onChange}
+          onOtherChange={onChange}
+          onPressEnter={onPressEnter}
         />
       );
     }
@@ -52,7 +42,7 @@ const FieldInput = memo<{
       return (
         <Input
           placeholder={field.placeholder}
-          value={value as string}
+          value={formData[field.key] as string}
           onChange={(e) => onChange(field.key, e.target.value)}
           onPressEnter={onPressEnter}
         />
@@ -61,18 +51,59 @@ const FieldInput = memo<{
   }
 });
 
+/** Check if a select/multiselect field has a valid value (preset or other) */
+const isSelectFieldFilled = (
+  field: InteractionField,
+  formData: Record<string, string | string[]>,
+): boolean => {
+  const presetValue = formData[field.key];
+  const otherValue = (formData[getOtherKey(field.key)] as string) ?? '';
+
+  if (field.kind === 'multiselect') {
+    const hasPresets = Array.isArray(presetValue) && presetValue.length > 0;
+    const hasOther = otherValue.trim().length > 0;
+    return hasPresets || hasOther;
+  }
+  // select
+  const hasPreset = typeof presetValue === 'string' && presetValue.length > 0;
+  const hasOther = otherValue.trim().length > 0;
+  return hasPreset || hasOther;
+};
+
 const AskUserQuestionIntervention = memo<BuiltinInterventionProps<AskUserQuestionArgs>>(
   ({ args, interactionMode, onInteractionAction }) => {
     const { t } = useTranslation('ui');
     const { question } = args;
     const isCustom = interactionMode === 'custom';
 
-    const initialValues: Record<string, string | string[]> = {};
-    if (question.fields) {
+    const initialValues = useMemo(() => {
+      const values: Record<string, string | string[]> = {};
+      if (!question.fields) return values;
+
       for (const field of question.fields) {
-        if (field.value !== undefined) initialValues[field.key] = field.value;
+        if (field.value === undefined) continue;
+
+        if ((field.kind === 'select' || field.kind === 'multiselect') && field.options?.length) {
+          const optionValues = new Set(field.options.map((o) => o.value));
+
+          if (field.kind === 'multiselect' && Array.isArray(field.value)) {
+            const presets = field.value.filter((v) => optionValues.has(v));
+            const others = field.value.filter((v) => !optionValues.has(v));
+            if (presets.length > 0) values[field.key] = presets;
+            if (others.length > 0) values[getOtherKey(field.key)] = others.join(', ');
+          } else if (field.kind === 'select' && typeof field.value === 'string') {
+            if (optionValues.has(field.value)) {
+              values[field.key] = field.value;
+            } else {
+              values[getOtherKey(field.key)] = field.value;
+            }
+          }
+        } else {
+          values[field.key] = field.value;
+        }
       }
-    }
+      return values;
+    }, [question.fields]);
 
     const [formData, setFormData] = useState<Record<string, string | string[]>>(initialValues);
     const [submitting, setSubmitting] = useState(false);
@@ -85,7 +116,14 @@ const AskUserQuestionIntervention = memo<BuiltinInterventionProps<AskUserQuestio
       if (!onInteractionAction) return;
       setSubmitting(true);
       try {
-        await onInteractionAction({ payload: formData, type: 'submit' });
+        // Clean up empty values before submitting
+        const payload: Record<string, string | string[]> = {};
+        for (const [key, val] of Object.entries(formData)) {
+          if (Array.isArray(val) && val.length === 0) continue;
+          if (typeof val === 'string' && val.trim().length === 0) continue;
+          payload[key] = val;
+        }
+        await onInteractionAction({ payload, type: 'submit' });
       } finally {
         setSubmitting(false);
       }
@@ -99,8 +137,17 @@ const AskUserQuestionIntervention = memo<BuiltinInterventionProps<AskUserQuestio
     const isFreeform = !question.fields || question.fields.length === 0;
 
     const isSubmitDisabled = isFreeform
-      ? !formData['__freeform__']
-      : (question.fields?.some((f) => f.required && !formData[f.key]) ?? false);
+      ? !(formData['__freeform__'] as string)?.trim()
+      : (question.fields?.some((f) => {
+          if (!f.required) return false;
+          if (f.kind === 'select' || f.kind === 'multiselect') {
+            return !isSelectFieldFilled(f, formData);
+          }
+          const val = formData[f.key];
+          if (typeof val === 'string') return val.trim().length === 0;
+          if (Array.isArray(val)) return val.length === 0;
+          return !val;
+        }) ?? false);
 
     if (!isCustom) {
       return (
@@ -147,7 +194,7 @@ const AskUserQuestionIntervention = memo<BuiltinInterventionProps<AskUserQuestio
                   </Text>
                   <FieldInput
                     field={field}
-                    value={formData[field.key]}
+                    formData={formData}
                     onChange={handleFieldChange}
                     onPressEnter={() => {
                       if (!isSubmitDisabled) handleSubmit();
