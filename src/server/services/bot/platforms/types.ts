@@ -251,13 +251,6 @@ export abstract class ClientFactory {
  * Contains metadata, factory, and validation. All runtime operations go through PlatformClient.
  */
 export interface PlatformDefinition {
-  /**
-   * Authentication flow for obtaining credentials.
-   * - 'qrcode': QR code scan flow (e.g. WeChat iLink)
-   * When set, the frontend renders a QR code auth UI instead of manual credential inputs.
-   */
-  authFlow?: 'qrcode';
-
   /** Factory for creating PlatformClient instances and validating credentials/settings. */
   clientFactory: ClientFactory;
 
@@ -301,6 +294,14 @@ export interface PlatformDefinition {
    * Defaults to true.
    */
   supportsMessageEdit?: boolean;
+
+  /**
+   * Whether the platform supports typing indicators for bots.
+   * When true, a typing indicator is shown instead of posting an acknowledgment message.
+   * When false, a text acknowledgment ("Late night vibes.", etc.) is sent immediately.
+   * Defaults to true.
+   */
+  supportsTyping?: boolean;
 }
 
 /** Serialized platform definition for frontend consumption (excludes runtime-only fields). */
