@@ -511,52 +511,6 @@ export class StreamingExecutorActionImpl {
 
       stepCount++;
 
-      // ━━━ Message Queue Checkpoint (Path A) ━━━
-      // Between steps, drain queued messages and inject into agent state.
-      // The next LLM call will see the new user input.
-      const queuedMessages = this.#get().drainQueuedMessages(contextKey);
-      if (queuedMessages.length > 0) {
-        const merged = mergeQueuedMessages(queuedMessages);
-        log(
-          '[internal_execAgentRuntime] Injecting %d queued messages (merged content length: %d)',
-          queuedMessages.length,
-          merged.content.length,
-        );
-
-        // Find the last message to use as parentId
-        const currentMessages = this.#get().messagesMap[messageKey] || [];
-        const lastMsg = currentMessages.at(-1);
-        const parentId = lastMsg?.id;
-
-        // Persist the merged user message to database
-        const createResult = await this.#get().optimisticCreateMessage(
-          {
-            content: merged.content,
-            role: 'user' as const,
-            agentId: context.agentId,
-            topicId: context.topicId ?? undefined,
-            threadId: context.threadId ?? undefined,
-            parentId,
-            files: merged.files.length > 0 ? merged.files : undefined,
-          },
-          { operationId },
-        );
-
-        if (createResult) {
-          state = {
-            ...state,
-            messages: [...state.messages, { content: merged.content, role: 'user' as const }],
-          };
-
-          await this.#get().refreshMessages(context);
-
-          log(
-            '[internal_execAgentRuntime] Queued message injected, state.messages count: %d',
-            state.messages.length,
-          );
-        }
-      }
-
       // Compute step context from current db messages before each step
       // Use dbMessagesMap which contains persisted state (including pluginState.todos)
       const currentDBMessages = this.#get().dbMessagesMap[messageKey] || [];
@@ -748,19 +702,17 @@ export class StreamingExecutorActionImpl {
 
       await this.#get().refreshMessages(context);
 
-      // 2. Schedule a new agent runtime execution.
-      // Use setTimeout(0) to break out of the current execution context —
-      // calling internal_execAgentRuntime recursively within itself causes
-      // issues with zustand state batching and operation lifecycle.
-      const execRuntime = this.#get().internal_execAgentRuntime;
+      // 2. Schedule a new agent runtime execution on next tick.
+      // Must use useChatStore.getState() to get a fresh store reference,
+      // since the current execution context's references may be stale
+      // after completeOperation changed the store.
       const msgKey = messageKey;
       const execContext = { ...context };
       const parentMsgId = createResult.id;
 
       setTimeout(() => {
-        const displayMessages = displayMessageSelectors.getDisplayMessagesByKey(msgKey)(
-          useChatStore.getState(),
-        );
+        const store = useChatStore.getState();
+        const displayMessages = displayMessageSelectors.getDisplayMessagesByKey(msgKey)(store);
 
         log(
           '[internal_execAgentRuntime] Path B: starting new execAgentRuntime (deferred), parentMessageId=%s, messages=%d',
@@ -768,14 +720,16 @@ export class StreamingExecutorActionImpl {
           displayMessages.length,
         );
 
-        execRuntime({
-          context: execContext,
-          messages: displayMessages,
-          parentMessageId: parentMsgId,
-          parentMessageType: 'user',
-        }).catch((e: unknown) => {
-          console.error('[internal_execAgentRuntime] Path B execAgentRuntime failed:', e);
-        });
+        store
+          .internal_execAgentRuntime({
+            context: execContext,
+            messages: displayMessages,
+            parentMessageId: parentMsgId,
+            parentMessageType: 'user',
+          })
+          .catch((e: unknown) => {
+            console.error('[internal_execAgentRuntime] Path B execAgentRuntime failed:', e);
+          });
       }, 0);
 
       return; // Skip the normal completion below
