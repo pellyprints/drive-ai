@@ -20,6 +20,9 @@ import { fileChatSelectors, useFileStore } from '@/store/file';
 import WideScreenContainer from '../../WideScreenContainer';
 import InterventionBar from '../InterventionBar';
 import { dataSelectors, messageStateSelectors, useConversationStore } from '../store';
+import { type PendingIntervention } from '../store/slices/data/pendingInterventions';
+
+const EMPTY_INTERVENTIONS: PendingIntervention[] = [];
 
 export interface ChatInputProps {
   /**
@@ -119,9 +122,14 @@ const ChatInput = memo<ChatInputProps>(
     // Loading state from ConversationStore (bridged from ChatStore)
     const isInputLoading = useConversationStore(messageStateSelectors.isInputLoading);
 
-    // Pending interventions
-    const pendingInterventions = useConversationStore(dataSelectors.pendingInterventions);
-    const hasPendingInterventions = pendingInterventions.length > 0;
+    // Pending interventions — use boolean selector to avoid new-array re-renders
+    const hasPendingInterventions = useConversationStore(
+      (s) => dataSelectors.pendingInterventions(s).length > 0,
+    );
+    // Only compute the full array when needed (avoids infinite loop from ref callbacks)
+    const pendingInterventions = useConversationStore((s) =>
+      hasPendingInterventions ? dataSelectors.pendingInterventions(s) : EMPTY_INTERVENTIONS,
+    );
 
     // Send message error from ConversationStore
     const sendMessageErrorMsg = useConversationStore(messageStateSelectors.sendMessageError);

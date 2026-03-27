@@ -17,6 +17,7 @@ export const staticStyle = createStaticStyles(({ css, cssVar }) => ({
   `,
   composerZone: css`
     gap: 8px;
+    margin-block-start: -8px;
   `,
   greetingAvatar: css`
     border-radius: 10px;

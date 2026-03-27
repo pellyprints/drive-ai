@@ -4,6 +4,7 @@ import { type ReactNode, useRef } from 'react';
 import { memo, useMemo } from 'react';
 
 import { type ConversationHooks, ConversationProvider } from '@/features/Conversation';
+import { DEFAULT_OPERATION_STATE } from '@/features/Conversation/types/operation';
 import { useOperationState } from '@/hooks/useOperationState';
 import { useChatStore } from '@/store/chat';
 import { type MessageMapKeyInput } from '@/store/chat/utils/messageMapKey';
@@ -37,10 +38,12 @@ const OnboardingConversationProvider = memo<OnboardingConversationProviderProps>
     // would return empty and wipe the conversation. The snapshot keeps the
     // messages alive on the client regardless of subsequent fetches.
     const snapshotRef = useRef(messages);
+
     if (!frozen) {
       snapshotRef.current = messages;
     }
     const effectiveMessages = frozen ? snapshotRef.current : messages;
+    const effectiveOperationState = frozen ? DEFAULT_OPERATION_STATE : operationState;
 
     return (
       <ConversationProvider
@@ -48,7 +51,8 @@ const OnboardingConversationProvider = memo<OnboardingConversationProviderProps>
         hasInitMessages={!!effectiveMessages}
         hooks={hooks}
         messages={effectiveMessages}
-        operationState={operationState}
+        operationState={effectiveOperationState}
+        skipFetch={frozen}
         onMessagesChange={
           frozen
             ? undefined

@@ -145,7 +145,7 @@ const AgentOnboardingPage = memo(() => {
                   }
             }
           >
-            <ErrorBoundary FallbackComponent={() => null}>
+            <ErrorBoundary fallbackRender={() => null}>
               <AgentOnboardingConversation
                 finishTargetUrl={finishTargetUrl}
                 onboardingFinished={onboardingFinished}

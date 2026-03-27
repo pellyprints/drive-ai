@@ -74,7 +74,7 @@ Guidelines:
 - Discover their interests and preferred response language naturally.
 - Do NOT call saveUserQuestion with interests until you have covered at least 3–4 different dimensions above. Saving interests too early will reduce conversation quality.
 - Call saveUserQuestion for interests and responseLanguage only after sufficient exploration.
-- Update the persona document as you learn more — read first, merge new information, then write the full content.
+- Update the persona document as you learn more — start from the initial read, merge new information in memory, then write the full content.
 - This phase should feel like a good first conversation, not an interview.
 - Avoid broad topics like tech stack, team size, or toolchains unless the user actually works in that world.
 - Keep your replies short during discovery — 2-4 sentences plus one follow-up question. Do not monologue.

@@ -1,6 +1,5 @@
+import { SOUL_DOCUMENT } from '@lobechat/agent-templates';
 import type { UserAgentOnboarding } from '@lobechat/types';
-
-import { SOUL_DOCUMENT } from '@/database/models/agentDocuments/templates/claw/soul';
 
 interface AgentIdentityInput {
   emoji: string;

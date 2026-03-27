@@ -33,6 +33,9 @@ describe('web onboarding tool result helpers', () => {
 
     expect(message).toContain('Structured fields still needed: interests.');
     expect(message).toContain('Phase: Discovery');
+    expect(message).toContain(
+      'Questioning rule: for any direct question that expects user input, call lobe-user-interaction askUserQuestion by default.',
+    );
   });
 
   it('includes pacing hint when remaining discovery exchanges > 0', () => {

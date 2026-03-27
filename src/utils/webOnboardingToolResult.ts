@@ -42,7 +42,10 @@ export const formatWebOnboardingStateMessage = (state: UserAgentOnboardingContex
   if (state.finished) return 'Onboarding is complete.';
 
   const phaseGuidance = PHASE_GUIDANCE[state.phase] || '';
-  const parts: string[] = [phaseGuidance];
+  const parts: string[] = [
+    phaseGuidance,
+    'Questioning rule: for any direct question that expects user input, call lobe-user-interaction askUserQuestion by default.',
+  ];
 
   if (state.remainingDiscoveryExchanges !== undefined && state.remainingDiscoveryExchanges > 0) {
     parts.push(

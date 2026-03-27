@@ -114,13 +114,13 @@ const AgentOnboardingConversation = memo<AgentOnboardingConversationProps>(
     };
 
     return (
-      <Flexbox flex={1} gap={16} style={outerContainerStyle} width={'100%'}>
+      <Flexbox flex={1} style={outerContainerStyle} width={'100%'}>
         <Flexbox flex={1} style={scrollContainerStyle} width={'100%'}>
           <ChatList itemContent={itemContent} />
         </Flexbox>
 
         {!readOnly && !onboardingFinished && (
-          <Flexbox className={staticStyle.composerZone} paddingInline={8}>
+          <Flexbox className={staticStyle.composerZone}>
             <ChatInput
               allowExpand={false}
               leftActions={chatInputLeftActions}

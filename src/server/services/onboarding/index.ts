@@ -1,3 +1,4 @@
+import { getDocumentTemplate } from '@lobechat/agent-templates';
 import { BUILTIN_AGENT_SLUGS } from '@lobechat/builtin-agents';
 import { CURRENT_ONBOARDING_VERSION } from '@lobechat/const';
 import type {
@@ -17,7 +18,6 @@ import { merge } from '@lobechat/utils';
 import { and, count, eq } from 'drizzle-orm';
 
 import { AgentModel } from '@/database/models/agent';
-import { getDocumentTemplate } from '@/database/models/agentDocuments/templates';
 import { MessageModel } from '@/database/models/message';
 import { TopicModel } from '@/database/models/topic';
 import { UserModel } from '@/database/models/user';
