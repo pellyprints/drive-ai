@@ -2,13 +2,11 @@ import {
   WebOnboardingApiName,
   WebOnboardingIdentifier,
 } from '@lobechat/builtin-tool-web-onboarding';
-import { SESSION_CHAT_URL } from '@lobechat/const';
 import { type BuiltinToolContext, type BuiltinToolResult } from '@lobechat/types';
 import { BaseExecutor } from '@lobechat/types';
 
 import { userService } from '@/services/user';
 import { useUserStore } from '@/store/user';
-import { isDev } from '@/utils/env';
 
 import {
   createDocumentReadResult,
@@ -51,16 +49,6 @@ class WebOnboardingExecutor extends BaseExecutor<typeof WebOnboardingApiName> {
   finishOnboarding = async (_params: Record<string, never>, _ctx: BuiltinToolContext) => {
     const result = await userService.finishOnboarding();
     await syncUserOnboardingState();
-
-    if (result.success && result.agentId && result.topicId) {
-      const targetPath = `${SESSION_CHAT_URL(result.agentId)}?topic=${result.topicId}`;
-
-      if (isDev) {
-        console.info('[webOnboardingExecutor] finishOnboarding target:', targetPath);
-      } else {
-        window.location.assign(targetPath);
-      }
-    }
 
     return createWebOnboardingToolResult(result);
   };

@@ -1,9 +1,10 @@
 'use client';
 
 import type { BuiltinInterventionProps } from '@lobechat/types';
-import { Flexbox, Text } from '@lobehub/ui';
-import { Button, Input, Select } from 'antd';
+import { Button, Flexbox, Input, Text, TextArea } from '@lobehub/ui';
+import { Select } from '@lobehub/ui/base-ui';
 import { memo, useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import type { AskUserQuestionArgs, InteractionField } from '../../../types';
 
@@ -16,7 +17,7 @@ const FieldInput = memo<{
   switch (field.kind) {
     case 'textarea': {
       return (
-        <Input.TextArea
+        <TextArea
           autoSize={{ maxRows: 6, minRows: 2 }}
           placeholder={field.placeholder}
           value={value as string}
@@ -31,7 +32,7 @@ const FieldInput = memo<{
           placeholder={field.placeholder}
           style={{ width: '100%' }}
           value={value as string}
-          onChange={(v) => onChange(field.key, v)}
+          onChange={(v) => onChange(field.key, v as string)}
         />
       );
     }
@@ -43,7 +44,7 @@ const FieldInput = memo<{
           placeholder={field.placeholder}
           style={{ width: '100%' }}
           value={value as string[]}
-          onChange={(v) => onChange(field.key, v)}
+          onChange={(v) => onChange(field.key, v as string[])}
         />
       );
     }
@@ -62,6 +63,7 @@ const FieldInput = memo<{
 
 const AskUserQuestionIntervention = memo<BuiltinInterventionProps<AskUserQuestionArgs>>(
   ({ args, interactionMode, onInteractionAction }) => {
+    const { t } = useTranslation('ui');
     const { question } = args;
     const isCustom = interactionMode === 'custom';
 
@@ -127,7 +129,7 @@ const AskUserQuestionIntervention = memo<BuiltinInterventionProps<AskUserQuestio
           </Text>
         )}
         {isFreeform ? (
-          <Input.TextArea
+          <TextArea
             autoSize={{ maxRows: 6, minRows: 2 }}
             placeholder={question.description || ''}
             value={formData['__freeform__'] as string}
@@ -157,14 +159,14 @@ const AskUserQuestionIntervention = memo<BuiltinInterventionProps<AskUserQuestio
           )
         )}
         <Flexbox horizontal gap={8} justify="flex-end">
-          <Button onClick={handleSkip}>Skip</Button>
+          <Button onClick={handleSkip}>{t('form.skip')}</Button>
           <Button
             disabled={isSubmitDisabled}
             loading={submitting}
             type="primary"
             onClick={handleSubmit}
           >
-            Submit
+            {t('form.submit')}
           </Button>
         </Flexbox>
       </Flexbox>

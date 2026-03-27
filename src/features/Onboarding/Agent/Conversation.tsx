@@ -1,8 +1,10 @@
 'use client';
 
-import { Avatar, Flexbox, Markdown, Text } from '@lobehub/ui';
+import { Avatar, Button, Flexbox, FluentEmoji, Markdown, Text } from '@lobehub/ui';
+import { LogIn } from 'lucide-react';
 import type { CSSProperties } from 'react';
 import { memo, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import type { ActionKeys } from '@/features/ChatInput';
 import {
@@ -20,6 +22,8 @@ import { staticStyle } from './staticStyle';
 const assistantLikeRoles = new Set(['assistant', 'assistantGroup', 'supervisor']);
 
 interface AgentOnboardingConversationProps {
+  finishTargetUrl?: string;
+  onboardingFinished?: boolean;
   readOnly?: boolean;
 }
 
@@ -34,68 +38,100 @@ const scrollContainerStyle: CSSProperties = {
   overflowY: 'auto',
   position: 'relative',
 };
+const completionTitleStyle: CSSProperties = { fontSize: 18, fontWeight: 600 };
 
-const AgentOnboardingConversation = memo<AgentOnboardingConversationProps>(({ readOnly }) => {
-  const agentMeta = useAgentMeta();
-  const displayMessages = useConversationStore(conversationSelectors.displayMessages);
+const AgentOnboardingConversation = memo<AgentOnboardingConversationProps>(
+  ({ finishTargetUrl, onboardingFinished, readOnly }) => {
+    const { t } = useTranslation('onboarding');
+    const agentMeta = useAgentMeta();
+    const displayMessages = useConversationStore(conversationSelectors.displayMessages);
 
-  const isGreetingState = useMemo(() => {
-    if (displayMessages.length !== 1) return false;
-    const first = displayMessages[0];
-    return assistantLikeRoles.has(first.role);
-  }, [displayMessages]);
+    const isGreetingState = useMemo(() => {
+      if (displayMessages.length !== 1) return false;
+      const first = displayMessages[0];
+      return assistantLikeRoles.has(first.role);
+    }, [displayMessages]);
 
-  const itemContent = (index: number, id: string) => {
-    const isLatestItem = displayMessages.length === index + 1;
+    const itemContent = (index: number, id: string) => {
+      const isLatestItem = displayMessages.length === index + 1;
 
-    if (isGreetingState && index === 0) {
-      const message = displayMessages[0];
-      return (
-        <Flexbox align={'center'} justify={'center'} style={greetingCenterStyle}>
-          <Flexbox className={staticStyle.greetingWrap} gap={16}>
-            <Flexbox horizontal align={'flex-start'} gap={12}>
-              <Avatar
-                avatar={agentMeta.avatar}
-                background={agentMeta.backgroundColor}
-                className={staticStyle.greetingAvatar}
-                shape={'square'}
-                size={36}
-              />
-              <Flexbox gap={4}>
-                <Text style={agentTitleStyle} type={'secondary'}>
-                  {agentMeta.title}
-                </Text>
-                <Markdown className={staticStyle.greetingText} variant={'chat'}>
-                  {message.content}
-                </Markdown>
+      if (isGreetingState && index === 0) {
+        const message = displayMessages[0];
+        return (
+          <Flexbox align={'center'} justify={'center'} style={greetingCenterStyle}>
+            <Flexbox className={staticStyle.greetingWrap} gap={16}>
+              <Flexbox horizontal align={'flex-start'} gap={12}>
+                <Avatar
+                  avatar={agentMeta.avatar}
+                  background={agentMeta.backgroundColor}
+                  className={staticStyle.greetingAvatar}
+                  shape={'square'}
+                  size={36}
+                />
+                <Flexbox gap={4}>
+                  <Text style={agentTitleStyle} type={'secondary'}>
+                    {agentMeta.title}
+                  </Text>
+                  <Markdown className={staticStyle.greetingText} variant={'chat'}>
+                    {message.content}
+                  </Markdown>
+                </Flexbox>
               </Flexbox>
             </Flexbox>
           </Flexbox>
+        );
+      }
+
+      if (isLatestItem && onboardingFinished) {
+        return (
+          <>
+            <MessageItem id={id} index={index} isLatestItem={isLatestItem} />
+            <Flexbox
+              align={'center'}
+              className={staticStyle.completionEnter}
+              gap={14}
+              paddingBlock={40}
+            >
+              <FluentEmoji emoji={'🎉'} size={56} type={'anim'} />
+              <Text style={completionTitleStyle}>{t('agent.completionTitle')}</Text>
+              <Text type={'secondary'}>{t('agent.completionSubtitle')}</Text>
+              <Button
+                icon={<LogIn size={16} />}
+                style={{ marginTop: 8 }}
+                type={'primary'}
+                onClick={() => {
+                  if (finishTargetUrl) window.location.assign(finishTargetUrl);
+                }}
+              >
+                {t('agent.enterApp')}
+              </Button>
+            </Flexbox>
+          </>
+        );
+      }
+
+      return <MessageItem id={id} index={index} isLatestItem={isLatestItem} />;
+    };
+
+    return (
+      <Flexbox flex={1} gap={16} style={outerContainerStyle} width={'100%'}>
+        <Flexbox flex={1} style={scrollContainerStyle} width={'100%'}>
+          <ChatList itemContent={itemContent} />
         </Flexbox>
-      );
-    }
 
-    return <MessageItem id={id} index={index} isLatestItem={isLatestItem} />;
-  };
-
-  return (
-    <Flexbox flex={1} gap={16} style={outerContainerStyle} width={'100%'}>
-      <Flexbox flex={1} style={scrollContainerStyle} width={'100%'}>
-        <ChatList itemContent={itemContent} />
+        {!readOnly && !onboardingFinished && (
+          <Flexbox className={staticStyle.composerZone} paddingInline={8}>
+            <ChatInput
+              allowExpand={false}
+              leftActions={chatInputLeftActions}
+              showRuntimeConfig={false}
+            />
+          </Flexbox>
+        )}
       </Flexbox>
-
-      {!readOnly && (
-        <Flexbox className={staticStyle.composerZone} paddingInline={8}>
-          <ChatInput
-            allowExpand={false}
-            leftActions={chatInputLeftActions}
-            showRuntimeConfig={false}
-          />
-        </Flexbox>
-      )}
-    </Flexbox>
-  );
-});
+    );
+  },
+);
 
 AgentOnboardingConversation.displayName = 'AgentOnboardingConversation';
 

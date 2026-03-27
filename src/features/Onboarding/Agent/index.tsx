@@ -1,6 +1,7 @@
 'use client';
 
 import { BUILTIN_AGENT_SLUGS } from '@lobechat/builtin-agents';
+import { SESSION_CHAT_URL } from '@lobechat/const';
 import { Button, ErrorBoundary, Flexbox, Text } from '@lobehub/ui';
 import { Drawer } from 'antd';
 import { History } from 'lucide-react';
@@ -29,6 +30,9 @@ const AgentOnboardingPage = memo(() => {
   const useInitBuiltinAgent = useAgentStore((s) => s.useInitBuiltinAgent);
   const onboardingAgentId = useAgentStore(
     builtinAgentSelectors.getBuiltinAgentId(BUILTIN_AGENT_SLUGS.webOnboarding),
+  );
+  const inboxAgentId = useAgentStore(
+    builtinAgentSelectors.getBuiltinAgentId(BUILTIN_AGENT_SLUGS.inbox),
   );
   const [agentOnboarding, refreshUserState, resetAgentOnboarding] = useUserStore((s) => [
     s.agentOnboarding,
@@ -72,6 +76,12 @@ const AgentOnboardingPage = memo(() => {
   const activeTopicId = currentContext.topicId || data?.topicId;
   const historyTopics = historyData?.items || [];
   const effectiveTopicId = selectedTopicId || activeTopicId;
+  const onboardingFinished = !!agentOnboarding?.finishedAt;
+  const finishTargetUrl = useMemo(() => {
+    if (!onboardingFinished || !inboxAgentId || !effectiveTopicId) return undefined;
+    return `${SESSION_CHAT_URL(inboxAgentId)}?topic=${effectiveTopicId}`;
+  }, [onboardingFinished, inboxAgentId, effectiveTopicId]);
+
   const viewingHistoricalTopic =
     !!activeTopicId && !!effectiveTopicId && effectiveTopicId !== activeTopicId;
 
@@ -122,16 +132,25 @@ const AgentOnboardingPage = memo(() => {
         <Flexbox flex={1} gap={16} style={{ minHeight: 0 }}>
           <OnboardingConversationProvider
             agentId={onboardingAgentId}
+            frozen={onboardingFinished}
             topicId={effectiveTopicId}
-            hooks={{
-              onAfterSendMessage: async () => {
-                await syncOnboardingContext();
-                await refreshUserState();
-              },
-            }}
+            hooks={
+              onboardingFinished
+                ? undefined
+                : {
+                    onAfterSendMessage: async () => {
+                      await syncOnboardingContext();
+                      await refreshUserState();
+                    },
+                  }
+            }
           >
             <ErrorBoundary FallbackComponent={() => null}>
-              <AgentOnboardingConversation readOnly={viewingHistoricalTopic} />
+              <AgentOnboardingConversation
+                finishTargetUrl={finishTargetUrl}
+                onboardingFinished={onboardingFinished}
+                readOnly={viewingHistoricalTopic}
+              />
             </ErrorBoundary>
           </OnboardingConversationProvider>
           {isDev && historyTopics.length > 0 && (
