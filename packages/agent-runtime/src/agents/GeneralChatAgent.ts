@@ -577,6 +577,12 @@ export class GeneralChatAgent implements Agent {
           };
         }
 
+        // If there are queued user messages, finish early so the queue
+        // can be processed as a new operation with full context
+        if (context.stepContext?.hasQueuedMessages) {
+          return { reason: 'completed', type: 'finish' };
+        }
+
         // No pending tools, continue to call LLM with tool results
         return this.toLLMCall({
           messages: state.messages,

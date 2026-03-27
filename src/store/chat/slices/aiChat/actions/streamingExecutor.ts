@@ -520,7 +520,13 @@ export class StreamingExecutorActionImpl {
       const activatedToolIds = selectActivatedToolIdsFromMessages(currentDBMessages);
       // Accumulate activated skills from activateSkill messages
       const activatedSkills = selectActivatedSkillsFromMessages(currentDBMessages);
-      const stepContext = computeStepContext({ activatedSkills, activatedToolIds, todos });
+      const hasQueuedMessages = (this.#get().queuedMessages[contextKey]?.length ?? 0) > 0;
+      const stepContext = computeStepContext({
+        activatedSkills,
+        activatedToolIds,
+        hasQueuedMessages,
+        todos,
+      });
 
       // If page agent is enabled, get the latest XML for stepPageEditor
       if (nextContext.initialContext?.pageEditor) {
@@ -623,27 +629,6 @@ export class StreamingExecutorActionImpl {
         break;
       }
 
-      // ━━━ Message Queue Checkpoint (Path A) ━━━
-      // After a tool-result step completes and before the next LLM call,
-      // if queue has messages: stop this operation and hand off to Path B.
-      // Path B (post-loop) will create user message + start new operation.
-      // The new operation's LLM sees: full context + tool results + new user message.
-      if (
-        result.nextContext?.phase &&
-        ['tool_result', 'tools_batch_result', 'tasks_batch_result'].includes(
-          result.nextContext.phase,
-        ) &&
-        (this.#get().queuedMessages[contextKey]?.length ?? 0) > 0
-      ) {
-        log(
-          '[internal_execAgentRuntime] Path A: queue has messages after tool phase=%s, handing off to Path B',
-          result.nextContext.phase,
-        );
-        // Mark as done so Path B picks it up
-        state = { ...state, status: 'done' };
-        break;
-      }
-
       // If no nextContext, stop execution
       if (!result.nextContext) {
         log('[internal_execAgentRuntime] No next context, stopping loop');
@@ -683,33 +668,25 @@ export class StreamingExecutorActionImpl {
       log('[internal_execAgentRuntime] afterCompletion callbacks executed');
     }
 
-    // ━━━ Message Queue Post-Completion (Path B) ━━━
-    // If the loop finished (done) and queue still has messages (enqueued during the
-    // last step), complete this operation and trigger a new sendMessage.
+    // If the loop finished and queue still has messages, complete this operation
+    // and trigger a new sendMessage for the merged queued content.
     const remainingQueued = this.#get().drainQueuedMessages(contextKey);
     if (remainingQueued.length > 0 && state.status === 'done') {
       const merged = mergeQueuedMessages(remainingQueued);
       log(
-        '[internal_execAgentRuntime] Path B: %d queued messages after completion, triggering new agent execution',
+        '[internal_execAgentRuntime] %d queued messages after completion, triggering new sendMessage',
         remainingQueued.length,
       );
 
-      // Complete current operation first
       this.#get().completeOperation(operationId);
 
-      // Mark unread completion
       const completedOp = this.#get().operations[operationId];
       if (completedOp?.context.agentId) {
         this.#get().markUnreadCompleted(completedOp.context.agentId, completedOp.context.topicId);
       }
 
-      // Trigger a new sendMessage on next tick.
-      // sendMessage handles the full lifecycle: create user message on server,
-      // create assistant message placeholder, and call internal_execAgentRuntime.
       const execContext = { ...context };
       const mergedContent = merged.content;
-
-      log('[internal_execAgentRuntime] Path B: scheduling sendMessage for queued content');
 
       setTimeout(() => {
         useChatStore
