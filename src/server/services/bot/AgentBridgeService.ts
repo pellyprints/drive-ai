@@ -666,6 +666,13 @@ export class AgentBridgeService {
         }),
       );
     } catch (error) {
+      // For stale topicId FK violations, re-throw so handleSubscribedMessage can clear
+      // the cached topicId and retry as a fresh mention instead of showing a DB error.
+      const errMsg = error instanceof Error ? error.message : String(error);
+      if (errMsg.includes('Failed query') && errMsg.includes('topic_id')) {
+        throw error;
+      }
+
       await this.finishStartupFailure({
         error,
         progressMessage,
