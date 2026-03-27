@@ -668,36 +668,44 @@ export class StreamingExecutorActionImpl {
       log('[internal_execAgentRuntime] afterCompletion callbacks executed');
     }
 
-    // If the loop finished and queue still has messages, complete this operation
-    // and trigger a new sendMessage for the merged queued content.
-    const remainingQueued = this.#get().drainQueuedMessages(contextKey);
-    if (remainingQueued.length > 0 && state.status === 'done') {
-      const merged = mergeQueuedMessages(remainingQueued);
-      log(
-        '[internal_execAgentRuntime] %d queued messages after completion, triggering new sendMessage',
-        remainingQueued.length,
-      );
+    // If completed successfully and queue has messages, drain and trigger new sendMessage.
+    // Only drain on success — on error the queue is left intact so messages aren't lost.
+    if (state.status === 'done') {
+      const remainingQueued = this.#get().drainQueuedMessages(contextKey);
+      if (remainingQueued.length > 0) {
+        const merged = mergeQueuedMessages(remainingQueued);
+        log(
+          '[internal_execAgentRuntime] %d queued messages after completion, triggering new sendMessage',
+          remainingQueued.length,
+        );
 
-      this.#get().completeOperation(operationId);
+        this.#get().completeOperation(operationId);
 
-      const completedOp = this.#get().operations[operationId];
-      if (completedOp?.context.agentId) {
-        this.#get().markUnreadCompleted(completedOp.context.agentId, completedOp.context.topicId);
+        const completedOp = this.#get().operations[operationId];
+        if (completedOp?.context.agentId) {
+          this.#get().markUnreadCompleted(completedOp.context.agentId, completedOp.context.topicId);
+        }
+
+        const execContext = { ...context };
+        const mergedContent = merged.content;
+        // Convert file id strings — sendMessage only reads f.id from each item
+        const mergedFiles =
+          merged.files.length > 0 ? merged.files.map((id) => ({ id }) as any) : undefined;
+
+        setTimeout(() => {
+          useChatStore
+            .getState()
+            .sendMessage({ message: mergedContent, files: mergedFiles, context: execContext })
+            .catch((e: unknown) => {
+              console.error(
+                '[internal_execAgentRuntime] sendMessage for queued content failed:',
+                e,
+              );
+            });
+        }, 100);
+
+        return; // Skip the normal completion below
       }
-
-      const execContext = { ...context };
-      const mergedContent = merged.content;
-
-      setTimeout(() => {
-        useChatStore
-          .getState()
-          .sendMessage({ message: mergedContent, context: execContext })
-          .catch((e: unknown) => {
-            console.error('[internal_execAgentRuntime] Path B sendMessage failed:', e);
-          });
-      }, 100);
-
-      return; // Skip the normal completion below
     }
 
     // Complete operation based on final state
