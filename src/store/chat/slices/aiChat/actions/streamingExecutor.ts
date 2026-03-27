@@ -35,7 +35,7 @@ import { toolInterventionSelectors } from '@/store/user/selectors';
 import { getUserStoreState } from '@/store/user/store';
 import { markdownToTxt } from '@/utils/markdownToTxt';
 
-import { displayMessageSelectors, topicSelectors } from '../../../selectors';
+import { topicSelectors } from '../../../selectors';
 import { messageMapKey } from '../../../utils/messageMapKey';
 import { topicMapKey } from '../../../utils/topicMapKey';
 import {
@@ -703,55 +703,22 @@ export class StreamingExecutorActionImpl {
         this.#get().markUnreadCompleted(completedOp.context.agentId, completedOp.context.topicId);
       }
 
-      // 1. Persist the queued message as a user message in DB
-      const currentMessages = this.#get().messagesMap[messageKey] || [];
-      const parentMsg = currentMessages.at(-1);
-      const createResult = await this.#get().optimisticCreateMessage({
-        content: merged.content,
-        role: 'user' as const,
-        agentId: context.agentId,
-        topicId: context.topicId ?? undefined,
-        threadId: context.threadId ?? undefined,
-        parentId: parentMsg?.id,
-        files: merged.files.length > 0 ? merged.files : undefined,
-      });
-
-      if (!createResult) {
-        log('[internal_execAgentRuntime] Path B: optimisticCreateMessage returned undefined');
-        return;
-      }
-
-      await this.#get().refreshMessages(context);
-
-      // 2. Schedule a new agent runtime execution on next tick.
-      // Must use useChatStore.getState() to get a fresh store reference,
-      // since the current execution context's references may be stale
-      // after completeOperation changed the store.
-      const msgKey = messageKey;
+      // Trigger a new sendMessage on next tick.
+      // sendMessage handles the full lifecycle: create user message on server,
+      // create assistant message placeholder, and call internal_execAgentRuntime.
       const execContext = { ...context };
-      const parentMsgId = createResult.id;
+      const mergedContent = merged.content;
+
+      log('[internal_execAgentRuntime] Path B: scheduling sendMessage for queued content');
 
       setTimeout(() => {
-        const store = useChatStore.getState();
-        const displayMessages = displayMessageSelectors.getDisplayMessagesByKey(msgKey)(store);
-
-        log(
-          '[internal_execAgentRuntime] Path B: starting new execAgentRuntime (deferred), parentMessageId=%s, messages=%d',
-          parentMsgId,
-          displayMessages.length,
-        );
-
-        store
-          .internal_execAgentRuntime({
-            context: execContext,
-            messages: displayMessages,
-            parentMessageId: parentMsgId,
-            parentMessageType: 'user',
-          })
+        useChatStore
+          .getState()
+          .sendMessage({ message: mergedContent, context: execContext })
           .catch((e: unknown) => {
-            console.error('[internal_execAgentRuntime] Path B execAgentRuntime failed:', e);
+            console.error('[internal_execAgentRuntime] Path B sendMessage failed:', e);
           });
-      }, 0);
+      }, 100);
 
       return; // Skip the normal completion below
     }
