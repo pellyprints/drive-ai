@@ -20,9 +20,6 @@ import { fileChatSelectors, useFileStore } from '@/store/file';
 import WideScreenContainer from '../../WideScreenContainer';
 import InterventionBar from '../InterventionBar';
 import { dataSelectors, messageStateSelectors, useConversationStore } from '../store';
-import { type PendingIntervention } from '../store/slices/data/pendingInterventions';
-
-const EMPTY_INTERVENTIONS: PendingIntervention[] = [];
 
 export interface ChatInputProps {
   /**
@@ -122,14 +119,19 @@ const ChatInput = memo<ChatInputProps>(
     // Loading state from ConversationStore (bridged from ChatStore)
     const isInputLoading = useConversationStore(messageStateSelectors.isInputLoading);
 
-    // Pending interventions — use boolean selector to avoid new-array re-renders
-    const hasPendingInterventions = useConversationStore(
-      (s) => dataSelectors.pendingInterventions(s).length > 0,
+    // Pending interventions — use custom equality to prevent infinite re-render loop.
+    // The selector creates new array/object refs each call; without equality check,
+    // any store update → new ref → re-render → Intervention's store writes → loop.
+    const pendingInterventions = useConversationStore(
+      dataSelectors.pendingInterventions,
+      (a, b) => {
+        if (a.length !== b.length) return false;
+        return a.every(
+          (item, i) => item.toolCallId === b[i].toolCallId && item.requestArgs === b[i].requestArgs,
+        );
+      },
     );
-    // Only compute the full array when needed (avoids infinite loop from ref callbacks)
-    const pendingInterventions = useConversationStore((s) =>
-      hasPendingInterventions ? dataSelectors.pendingInterventions(s) : EMPTY_INTERVENTIONS,
-    );
+    const hasPendingInterventions = pendingInterventions.length > 0;
 
     // Send message error from ConversationStore
     const sendMessageErrorMsg = useConversationStore(messageStateSelectors.sendMessageError);
