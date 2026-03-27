@@ -623,6 +623,27 @@ export class StreamingExecutorActionImpl {
         break;
       }
 
+      // ━━━ Message Queue Checkpoint (Path A) ━━━
+      // After a tool-result step completes and before the next LLM call,
+      // if queue has messages: stop this operation and hand off to Path B.
+      // Path B (post-loop) will create user message + start new operation.
+      // The new operation's LLM sees: full context + tool results + new user message.
+      if (
+        result.nextContext?.phase &&
+        ['tool_result', 'tools_batch_result', 'tasks_batch_result'].includes(
+          result.nextContext.phase,
+        ) &&
+        (this.#get().queuedMessages[contextKey]?.length ?? 0) > 0
+      ) {
+        log(
+          '[internal_execAgentRuntime] Path A: queue has messages after tool phase=%s, handing off to Path B',
+          result.nextContext.phase,
+        );
+        // Mark as done so Path B picks it up
+        state = { ...state, status: 'done' };
+        break;
+      }
+
       // If no nextContext, stop execution
       if (!result.nextContext) {
         log('[internal_execAgentRuntime] No next context, stopping loop');
