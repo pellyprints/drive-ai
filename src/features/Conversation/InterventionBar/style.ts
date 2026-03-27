@@ -15,6 +15,8 @@ export const useStyles = createStyles(({ css, token }) => ({
   content: css`
     overflow-y: auto;
     flex: 1;
+
+    min-height: 0;
     padding-block: 12px;
     padding-inline: 16px;
   `,

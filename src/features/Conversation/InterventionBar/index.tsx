@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useState } from 'react';
+import { memo, useCallback, useMemo, useState } from 'react';
 
 import { type PendingIntervention } from '../store/slices/data/pendingInterventions';
 import InterventionContent from './InterventionContent';
@@ -11,19 +11,24 @@ interface InterventionBarProps {
 
 const InterventionBar = memo<InterventionBarProps>(({ interventions }) => {
   const { styles } = useStyles();
-  const [activeIndex, setActiveIndex] = useState(0);
+  const [activeId, setActiveId] = useState<string | null>(null);
 
-  // Auto-advance: when the active intervention is resolved (removed from list),
-  // clamp activeIndex to valid range
-  useEffect(() => {
-    if (activeIndex >= interventions.length) {
-      setActiveIndex(Math.max(0, interventions.length - 1));
+  // Derive the active index from the stored toolCallId.
+  // Falls back to the first intervention when the previously active one is resolved.
+  const activeIndex = useMemo(() => {
+    if (activeId) {
+      const idx = interventions.findIndex((i) => i.toolCallId === activeId);
+      if (idx >= 0) return idx;
     }
-  }, [interventions.length, activeIndex]);
+    return 0;
+  }, [interventions, activeId]);
 
-  const handleTabChange = useCallback((index: number) => {
-    setActiveIndex(index);
-  }, []);
+  const handleTabChange = useCallback(
+    (index: number) => {
+      setActiveId(interventions[index]?.toolCallId ?? null);
+    },
+    [interventions],
+  );
 
   const activeIntervention = interventions[activeIndex];
   if (!activeIntervention) return null;
