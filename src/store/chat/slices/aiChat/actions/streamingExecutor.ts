@@ -28,14 +28,14 @@ import { mergeQueuedMessages } from '@/services/messageQueue';
 import { getAgentStoreState } from '@/store/agent';
 import { agentSelectors } from '@/store/agent/selectors';
 import { createAgentExecutors } from '@/store/chat/agents/createAgentExecutors';
-import { type ChatStore } from '@/store/chat/store';
+import { type ChatStore, useChatStore } from '@/store/chat/store';
 import { pageAgentRuntime } from '@/store/tool/slices/builtin/executors/lobe-page-agent';
 import { type StoreSetter } from '@/store/types';
 import { toolInterventionSelectors } from '@/store/user/selectors';
 import { getUserStoreState } from '@/store/user/store';
 import { markdownToTxt } from '@/utils/markdownToTxt';
 
-import { topicSelectors } from '../../../selectors';
+import { displayMessageSelectors, topicSelectors } from '../../../selectors';
 import { messageMapKey } from '../../../utils/messageMapKey';
 import { topicMapKey } from '../../../utils/topicMapKey';
 import {
@@ -715,7 +715,7 @@ export class StreamingExecutorActionImpl {
     if (remainingQueued.length > 0 && state.status === 'done') {
       const merged = mergeQueuedMessages(remainingQueued);
       log(
-        '[internal_execAgentRuntime] Path B: %d queued messages after completion, triggering new sendMessage',
+        '[internal_execAgentRuntime] Path B: %d queued messages after completion, triggering new agent execution',
         remainingQueued.length,
       );
 
@@ -728,14 +728,55 @@ export class StreamingExecutorActionImpl {
         this.#get().markUnreadCompleted(completedOp.context.agentId, completedOp.context.topicId);
       }
 
-      // Trigger new sendMessage to process the queued content.
-      // This will create a new operation (sendMessage → execAgentRuntime).
-      log('[internal_execAgentRuntime] Path B: calling sendMessage with queued content');
-      try {
-        await this.#get().sendMessage({ message: merged.content, context });
-      } catch (e) {
-        console.error('[internal_execAgentRuntime] Path B sendMessage failed:', e);
+      // 1. Persist the queued message as a user message in DB
+      const currentMessages = this.#get().messagesMap[messageKey] || [];
+      const parentMsg = currentMessages.at(-1);
+      const createResult = await this.#get().optimisticCreateMessage({
+        content: merged.content,
+        role: 'user' as const,
+        agentId: context.agentId,
+        topicId: context.topicId ?? undefined,
+        threadId: context.threadId ?? undefined,
+        parentId: parentMsg?.id,
+        files: merged.files.length > 0 ? merged.files : undefined,
+      });
+
+      if (!createResult) {
+        log('[internal_execAgentRuntime] Path B: optimisticCreateMessage returned undefined');
+        return;
       }
+
+      await this.#get().refreshMessages(context);
+
+      // 2. Schedule a new agent runtime execution.
+      // Use setTimeout(0) to break out of the current execution context —
+      // calling internal_execAgentRuntime recursively within itself causes
+      // issues with zustand state batching and operation lifecycle.
+      const execRuntime = this.#get().internal_execAgentRuntime;
+      const msgKey = messageKey;
+      const execContext = { ...context };
+      const parentMsgId = createResult.id;
+
+      setTimeout(() => {
+        const displayMessages = displayMessageSelectors.getDisplayMessagesByKey(msgKey)(
+          useChatStore.getState(),
+        );
+
+        log(
+          '[internal_execAgentRuntime] Path B: starting new execAgentRuntime (deferred), parentMessageId=%s, messages=%d',
+          parentMsgId,
+          displayMessages.length,
+        );
+
+        execRuntime({
+          context: execContext,
+          messages: displayMessages,
+          parentMessageId: parentMsgId,
+          parentMessageType: 'user',
+        }).catch((e: unknown) => {
+          console.error('[internal_execAgentRuntime] Path B execAgentRuntime failed:', e);
+        });
+      }, 0);
 
       return; // Skip the normal completion below
     }
