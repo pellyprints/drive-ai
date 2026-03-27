@@ -7,13 +7,17 @@ export const useStyles = createStyles(({ css, token }) => ({
     gap: 6px;
   `,
   option: css`
+    cursor: pointer;
+
     display: flex;
-    align-items: center;
     gap: 10px;
-    padding: 8px 12px;
+    align-items: center;
+
+    padding-block: 8px;
+    padding-inline: 12px;
     border: 1px solid ${token.colorBorderSecondary};
     border-radius: ${token.borderRadius}px;
-    cursor: pointer;
+
     transition: all ${token.motionDurationMid};
 
     &:hover {
@@ -32,9 +36,11 @@ export const useStyles = createStyles(({ css, token }) => ({
   `,
   indicator: css`
     flex-shrink: 0;
+
     width: 16px;
     height: 16px;
     border: 2px solid ${token.colorBorderSecondary};
+
     transition: all ${token.motionDurationMid};
   `,
   indicatorRadio: css`
@@ -44,44 +50,52 @@ export const useStyles = createStyles(({ css, token }) => ({
     border-radius: ${token.borderRadiusSM}px;
   `,
   indicatorSelected: css`
+    position: relative;
     border-color: ${token.colorPrimary};
     background: ${token.colorPrimary};
-    position: relative;
 
     &::after {
       content: '';
+
       position: absolute;
       inset: 2px;
+
       border-radius: inherit;
+
       background: ${token.colorWhite};
     }
   `,
   indicatorCheckboxSelected: css`
+    position: relative;
     border-color: ${token.colorPrimary};
     background: ${token.colorPrimary};
-    position: relative;
 
     &::after {
       content: '';
+
       position: absolute;
-      top: 2px;
-      left: 5px;
+      inset-block-start: 2px;
+      inset-inline-start: 5px;
+      transform: rotate(45deg);
+
       width: 4px;
       height: 7px;
       border: solid ${token.colorWhite};
       border-width: 0 2px 2px 0;
-      transform: rotate(45deg);
     }
   `,
   otherInput: css`
     flex: 1;
-    border: none;
-    background: transparent;
-    outline: none;
+
+    min-width: 0;
     padding: 0;
+    border: none;
+
     font-size: ${token.fontSize}px;
     color: ${token.colorText};
-    min-width: 0;
+
+    background: transparent;
+    outline: none;
 
     &::placeholder {
       color: ${token.colorTextQuaternary};
@@ -93,9 +107,9 @@ export const useStyles = createStyles(({ css, token }) => ({
     }
   `,
   label: css`
+    user-select: none;
     flex: 1;
     font-size: ${token.fontSize}px;
     color: ${token.colorText};
-    user-select: none;
   `,
 }));
