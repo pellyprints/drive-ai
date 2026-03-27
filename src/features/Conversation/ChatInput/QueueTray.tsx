@@ -1,6 +1,7 @@
 'use client';
 
 import { ActionIcon, Flexbox, Icon } from '@lobehub/ui';
+import { createStaticStyles } from 'antd-style';
 import { ListEnd, Trash2 } from 'lucide-react';
 import { memo, useMemo } from 'react';
 
@@ -9,6 +10,34 @@ import { operationSelectors } from '@/store/chat/selectors';
 import { messageMapKey } from '@/store/chat/utils/messageMapKey';
 
 import { useConversationStore } from '../store';
+
+const styles = createStaticStyles(({ css, cssVar }) => ({
+  container: css`
+    border: 1px solid ${cssVar.colorBorderSecondary};
+    border-block-end: none;
+    border-radius: 12px 12px 0 0;
+    background: ${cssVar.colorBgContainer};
+  `,
+  icon: css`
+    flex-shrink: 0;
+    color: ${cssVar.colorTextDescription};
+  `,
+  item: css`
+    padding-block: 6px 4px;
+    padding-inline: 12px 8px;
+  `,
+  itemDivider: css`
+    border-block-start: 1px solid ${cssVar.colorBorderSecondary};
+  `,
+  text: css`
+    overflow: hidden;
+
+    font-size: 13px;
+    line-height: 1.4;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  `,
+}));
 
 const QueueTray = memo(() => {
   const context = useConversationStore((s) => s.context);
@@ -29,35 +58,17 @@ const QueueTray = memo(() => {
   if (queuedMessages.length === 0) return null;
 
   return (
-    <Flexbox gap={4} paddingInline={4} style={{ marginBottom: 4 }}>
-      {queuedMessages.map((msg) => (
+    <Flexbox className={styles.container} gap={0}>
+      {queuedMessages.map((msg, index) => (
         <Flexbox
           horizontal
           align="center"
+          className={index > 0 ? `${styles.item} ${styles.itemDivider}` : styles.item}
           gap={8}
           key={msg.id}
-          style={{
-            background: 'var(--ant-color-fill-quaternary)',
-            border: '1px solid var(--ant-color-border-secondary)',
-            borderRadius: 8,
-            padding: '6px 8px 6px 12px',
-          }}
         >
-          <Icon
-            icon={ListEnd}
-            size={14}
-            style={{ color: 'var(--ant-color-text-description)', flexShrink: 0 }}
-          />
-          <Flexbox
-            flex={1}
-            style={{
-              fontSize: 13,
-              lineHeight: 1.4,
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-            }}
-          >
+          <Icon className={styles.icon} icon={ListEnd} size={14} />
+          <Flexbox className={styles.text} flex={1}>
             {msg.content}
           </Flexbox>
           <ActionIcon

@@ -15,6 +15,7 @@ import {
   type SendButtonProps,
 } from '@/features/ChatInput/store/initialState';
 import { useChatStore } from '@/store/chat';
+import { operationSelectors } from '@/store/chat/selectors';
 import { fileChatSelectors, useFileStore } from '@/store/file';
 
 import WideScreenContainer from '../../WideScreenContainer';
@@ -107,6 +108,7 @@ const ChatInput = memo<ChatInputProps>(
     const { t } = useTranslation('chat');
 
     // ConversationStore state
+    const context = useConversationStore((s) => s.context);
     const [agentId, inputMessage, sendMessage, stopGenerating] = useConversationStore((s) => [
       s.context.agentId,
       s.inputMessage,
@@ -127,6 +129,11 @@ const ChatInput = memo<ChatInputProps>(
     const fileList = useFileStore(fileChatSelectors.chatUploadFileList);
     const contextList = useFileStore(fileChatSelectors.chatContextSelections);
     const isUploadingFiles = useFileStore(fileChatSelectors.isUploadingFiles);
+
+    // Queue state
+    const hasQueuedMessages = useChatStore(
+      (s) => operationSelectors.queuedMessageCount(context)(s) > 0,
+    );
 
     // Computed state
     const isInputEmpty = !inputMessage.trim() && fileList.length === 0 && contextList.length === 0;
@@ -179,7 +186,9 @@ const ChatInput = memo<ChatInputProps>(
     };
 
     const defaultContent = (
-      <WideScreenContainer style={skipScrollMarginWithList ? { marginTop: -12 } : undefined}>
+      <WideScreenContainer
+        style={skipScrollMarginWithList ? { marginTop: -12, position: 'relative' } : undefined}
+      >
         {sendMessageErrorMsg && (
           <Flexbox paddingBlock={'0 6px'} paddingInline={12}>
             <Alert
@@ -190,7 +199,20 @@ const ChatInput = memo<ChatInputProps>(
             />
           </Flexbox>
         )}
-        <QueueTray />
+        {hasQueuedMessages && (
+          <Flexbox
+            paddingInline={12}
+            style={{
+              position: 'absolute',
+              zIndex: 10,
+              bottom: '100%',
+              left: 12,
+              right: 12,
+            }}
+          >
+            <QueueTray />
+          </Flexbox>
+        )}
         <DesktopChatInput
           actionBarStyle={actionBarStyle}
           borderRadius={12}
