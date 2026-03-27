@@ -18,6 +18,7 @@
   "emojiPicker.fileTypeError": "You can only upload image files!",
   "emojiPicker.upload": "Upload",
   "emojiPicker.uploadBtn": "Crop and upload",
+  "form.other": "Other",
   "form.reset": "Reset",
   "form.skip": "Skip",
   "form.submit": "Submit",
