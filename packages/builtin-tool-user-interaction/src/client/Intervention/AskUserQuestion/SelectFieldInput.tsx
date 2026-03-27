@@ -1,6 +1,9 @@
 'use client';
 
-import { memo, useCallback, useRef } from 'react';
+import { Flexbox, Input } from '@lobehub/ui';
+import { Select } from '@lobehub/ui/base-ui';
+import type { InputRef } from 'antd';
+import { memo, useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { InteractionField } from '../../../types';
@@ -24,133 +27,113 @@ const SelectFieldInput = memo<SelectFieldInputProps>(
   ({ field, value, otherValue, onChange, onOtherChange, onPressEnter }) => {
     const { t } = useTranslation('ui');
     const { cx, styles } = useStyles();
-    const otherInputRef = useRef<HTMLInputElement>(null);
+    const otherInputRef = useRef<InputRef>(null);
     const isMulti = field.kind === 'multiselect';
     const options = field.options ?? [];
 
-    const selectedValues: string[] = isMulti
-      ? Array.isArray(value)
-        ? (value as string[])
-        : []
-      : value
-        ? [value as string]
-        : [];
+    const [otherActive, setOtherActive] = useState(() => otherValue.trim().length > 0);
 
-    const isOtherSelected = isMulti
-      ? otherValue.trim().length > 0
-      : selectedValues.length === 0 && otherValue.trim().length > 0;
-
-    const handlePresetClick = useCallback(
-      (optionValue: string) => {
-        if (isMulti) {
-          const current = Array.isArray(value) ? (value as string[]) : [];
-          const next = current.includes(optionValue)
-            ? current.filter((v) => v !== optionValue)
-            : [...current, optionValue];
-          onChange(field.key, next);
-        } else {
-          // Single select: select preset, clear Other
-          onChange(field.key, optionValue);
+    const handleSelectChange = useCallback(
+      (v: string | string[]) => {
+        onChange(field.key, v);
+        if (!isMulti) {
+          // Single select: choosing from Select clears Other
           onOtherChange(getOtherKey(field.key), '');
+          setOtherActive(false);
         }
       },
-      [field.key, isMulti, onChange, onOtherChange, value],
+      [field.key, isMulti, onChange, onOtherChange],
     );
+
+    const handleOtherToggle = useCallback(() => {
+      if (otherActive) {
+        // Deactivate Other
+        onOtherChange(getOtherKey(field.key), '');
+        setOtherActive(false);
+      } else {
+        // Activate Other, clear Select for single select
+        setOtherActive(true);
+        if (!isMulti) {
+          onChange(field.key, '');
+        }
+        // Focus input after render
+        setTimeout(() => otherInputRef.current?.focus(), 0);
+      }
+    }, [field.key, isMulti, onChange, onOtherChange, otherActive]);
 
     const handleOtherTextChange = useCallback(
       (text: string) => {
         onOtherChange(getOtherKey(field.key), text);
-        if (!isMulti) {
-          // Single select: typing in Other clears preset
+        if (!isMulti && text.trim().length > 0) {
+          // Single select: typing in Other clears Select
           onChange(field.key, '');
         }
       },
       [field.key, isMulti, onChange, onOtherChange],
     );
 
-    const handleOtherRowClick = useCallback(() => {
-      otherInputRef.current?.focus();
-    }, []);
-
-    const isSelected = (optionValue: string) => selectedValues.includes(optionValue);
-
-    const role = isMulti ? 'group' : 'radiogroup';
-    const itemRole = isMulti ? 'checkbox' : 'radio';
+    const isOtherChecked = otherActive || otherValue.trim().length > 0;
 
     return (
-      <div aria-label={field.label} className={styles.group} role={role}>
-        {options.map((option) => {
-          const selected = isSelected(option.value);
-          return (
-            <div
-              aria-checked={selected}
-              className={cx(styles.option, selected && styles.optionSelected)}
-              key={option.value}
-              role={itemRole}
-              tabIndex={0}
-              onClick={() => handlePresetClick(option.value)}
-              onKeyDown={(e) => {
-                if (e.key === ' ' || e.key === 'Enter') {
-                  e.preventDefault();
-                  handlePresetClick(option.value);
-                }
-              }}
-            >
-              <div
-                className={cx(
-                  styles.indicator,
-                  isMulti ? styles.indicatorCheckbox : styles.indicatorRadio,
-                  selected &&
-                    (isMulti ? styles.indicatorCheckboxSelected : styles.indicatorSelected),
-                )}
-              />
-              <span className={styles.label}>{option.label}</span>
-            </div>
-          );
-        })}
+      <Flexbox gap={8}>
+        {/* antd Select dropdown */}
+        {isMulti ? (
+          <Select
+            mode="multiple"
+            options={options.map((o) => ({ label: o.label, value: o.value }))}
+            placeholder={field.placeholder}
+            style={{ width: '100%' }}
+            value={value as string[]}
+            onChange={(v) => handleSelectChange(v as string[])}
+          />
+        ) : (
+          <Select
+            allowClear
+            options={options.map((o) => ({ label: o.label, value: o.value }))}
+            placeholder={field.placeholder}
+            style={{ width: '100%' }}
+            value={otherActive ? undefined : (value as string) || undefined}
+            onChange={(v) => handleSelectChange(v as string)}
+          />
+        )}
 
-        {/* Other row */}
+        {/* Other toggle row */}
         <div
-          aria-checked={isOtherSelected}
-          className={cx(styles.option, isOtherSelected && styles.optionSelected)}
-          role={itemRole}
+          aria-checked={isOtherChecked}
+          className={cx(styles.option, isOtherChecked && styles.optionSelected)}
+          role="checkbox"
           tabIndex={0}
-          onClick={handleOtherRowClick}
+          onClick={handleOtherToggle}
           onKeyDown={(e) => {
             if (e.key === ' ' || e.key === 'Enter') {
               e.preventDefault();
-              otherInputRef.current?.focus();
+              handleOtherToggle();
             }
           }}
         >
           <div
             className={cx(
               styles.indicator,
-              isMulti ? styles.indicatorCheckbox : styles.indicatorRadio,
-              isOtherSelected &&
-                (isMulti ? styles.indicatorCheckboxSelected : styles.indicatorSelected),
+              styles.indicatorCheckbox,
+              isOtherChecked && styles.indicatorCheckboxSelected,
             )}
           />
           <span className={styles.label} style={{ flex: '0 0 auto' }}>
             {t('form.other')}
           </span>
-          <input
-            aria-label={t('form.other')}
-            className={styles.otherInput}
-            placeholder={field.placeholder || '...'}
+        </div>
+
+        {/* Other input (shown when active) */}
+        {isOtherChecked && (
+          <Input
+            placeholder="..."
             ref={otherInputRef}
             value={otherValue}
             onChange={(e) => handleOtherTextChange(e.target.value)}
-            onClick={(e) => e.stopPropagation()}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                onPressEnter?.();
-              }
-            }}
+            onPressEnter={() => onPressEnter?.()}
           />
-        </div>
-      </div>
+        )}
+      </Flexbox>
     );
   },
 );
