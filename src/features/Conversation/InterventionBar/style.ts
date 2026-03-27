@@ -7,6 +7,7 @@ export const useStyles = createStyles(({ css, token }) => ({
     flex-direction: column;
 
     max-height: 50vh;
+    margin-block-end: 12px;
     border: 1px solid ${token.colorBorderSecondary};
     border-radius: 10px;
 

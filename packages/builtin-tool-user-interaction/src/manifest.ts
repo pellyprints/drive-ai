@@ -7,10 +7,10 @@ export const UserInteractionManifest: BuiltinToolManifest = {
   api: [
     {
       description:
-        'Present a question to the user with either structured form fields or freeform input. Returns the interaction request in pending state.',
+        'Create a UI-mediated interaction request with either structured form fields or freeform input. Returns the request in pending state.',
       humanIntervention: 'always',
       name: UserInteractionApiName.askUserQuestion,
-      renderDisplayControl: 'alwaysExpand',
+      renderDisplayControl: 'collapsed',
       parameters: {
         properties: {
           question: {
@@ -67,7 +67,8 @@ export const UserInteractionManifest: BuiltinToolManifest = {
       },
     },
     {
-      description: "Record the user's submitted response for a pending interaction request.",
+      description:
+        "Record the user's submitted response for a pending interaction request. In normal product flows, this is usually handled by the client or framework after the user submits in the UI.",
       name: UserInteractionApiName.submitUserResponse,
       parameters: {
         properties: {
@@ -86,7 +87,8 @@ export const UserInteractionManifest: BuiltinToolManifest = {
       },
     },
     {
-      description: 'Mark a pending interaction request as skipped with an optional reason.',
+      description:
+        'Mark a pending interaction request as skipped with an optional reason. In normal product flows, this is usually handled by the client or framework after the user skips in the UI.',
       name: UserInteractionApiName.skipUserResponse,
       parameters: {
         properties: {
@@ -104,7 +106,8 @@ export const UserInteractionManifest: BuiltinToolManifest = {
       },
     },
     {
-      description: 'Cancel a pending interaction request.',
+      description:
+        'Cancel a pending interaction request. In normal product flows, this is usually handled by the client or framework after the user cancels in the UI.',
       name: UserInteractionApiName.cancelUserResponse,
       parameters: {
         properties: {
@@ -118,7 +121,8 @@ export const UserInteractionManifest: BuiltinToolManifest = {
       },
     },
     {
-      description: 'Get the current state of an interaction request.',
+      description:
+        'Inspect the current state of a known interaction request. Use for recovery or diagnostics, not routine polling.',
       name: UserInteractionApiName.getInteractionState,
       parameters: {
         properties: {
@@ -136,8 +140,7 @@ export const UserInteractionManifest: BuiltinToolManifest = {
   identifier: UserInteractionIdentifier,
   meta: {
     avatar: '💬',
-    description:
-      'Ask users questions and collect structured responses with submit/skip/cancel semantics',
+    description: 'Ask users questions through UI interactions and observe their lifecycle outcomes',
     title: 'User Interaction',
   },
   systemRole: systemPrompt,

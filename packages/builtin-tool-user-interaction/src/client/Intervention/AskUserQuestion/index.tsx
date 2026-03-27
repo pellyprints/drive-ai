@@ -3,11 +3,12 @@
 import type { BuiltinInterventionProps } from '@lobechat/types';
 import { Button, Flexbox, Input, Text, TextArea } from '@lobehub/ui';
 import { Select } from '@lobehub/ui/base-ui';
-import { memo, useCallback, useState } from 'react';
+import { ArrowLeft, ArrowRight } from 'lucide-react';
+import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { AskUserQuestionArgs, InteractionField } from '../../../types';
-import { useStyles } from './style';
+import { styles } from './style';
 
 const FieldInput = memo<{
   field: InteractionField;
@@ -65,7 +66,6 @@ const FieldInput = memo<{
 const AskUserQuestionIntervention = memo<BuiltinInterventionProps<AskUserQuestionArgs>>(
   ({ args, interactionMode, onInteractionAction }) => {
     const { t } = useTranslation('ui');
-    const { styles } = useStyles();
     const { question } = args;
     const isCustom = interactionMode === 'custom';
 
@@ -80,6 +80,8 @@ const AskUserQuestionIntervention = memo<BuiltinInterventionProps<AskUserQuestio
     const [submitting, setSubmitting] = useState(false);
     const [escapeActive, setEscapeActive] = useState(false);
     const [escapeText, setEscapeText] = useState('');
+    const escapeContainerRef = useRef<HTMLDivElement>(null);
+    const formContainerRef = useRef<HTMLDivElement>(null);
 
     const handleFieldChange = useCallback((key: string, value: string | string[]) => {
       setFormData((prev) => ({ ...prev, [key]: value }));
@@ -107,6 +109,21 @@ const AskUserQuestionIntervention = memo<BuiltinInterventionProps<AskUserQuestio
     const handleEscapeToggle = useCallback(() => {
       setEscapeActive((prev) => !prev);
     }, []);
+
+    useEffect(() => {
+      const timer = setTimeout(() => {
+        if (escapeActive) {
+          const textarea =
+            escapeContainerRef.current?.querySelector<HTMLTextAreaElement>('textarea');
+          textarea?.focus();
+        } else {
+          const firstInput =
+            formContainerRef.current?.querySelector<HTMLElement>('input, textarea');
+          firstInput?.focus();
+        }
+      }, 0);
+      return () => clearTimeout(timer);
+    }, [escapeActive]);
 
     const isFreeform = !question.fields || question.fields.length === 0;
 
@@ -152,7 +169,7 @@ const AskUserQuestionIntervention = memo<BuiltinInterventionProps<AskUserQuestio
         ) : (
           <>
             {!escapeActive && (
-              <Flexbox gap={8}>
+              <Flexbox gap={8} ref={formContainerRef}>
                 {question.fields!.map((field) => (
                   <Flexbox gap={4} key={field.key}>
                     <Text style={{ fontSize: 13 }}>
@@ -174,9 +191,9 @@ const AskUserQuestionIntervention = memo<BuiltinInterventionProps<AskUserQuestio
 
             {/* Escape hatch: bypass form, type freely */}
             {escapeActive ? (
-              <Flexbox gap={8}>
+              <Flexbox gap={8} ref={escapeContainerRef}>
                 <Text className={styles.escapeLink} type="secondary" onClick={handleEscapeToggle}>
-                  ← {t('form.otherBack')}
+                  <ArrowLeft size={14} /> {t('form.otherBack')}
                 </Text>
                 <TextArea
                   autoSize={{ maxRows: 6, minRows: 2 }}
@@ -186,7 +203,7 @@ const AskUserQuestionIntervention = memo<BuiltinInterventionProps<AskUserQuestio
               </Flexbox>
             ) : (
               <Text className={styles.escapeLink} type="secondary" onClick={handleEscapeToggle}>
-                {t('form.other')} →
+                {t('form.other')} <ArrowRight size={14} />
               </Text>
             )}
           </>
