@@ -1,5 +1,43 @@
 import { createStaticStyles, keyframes } from 'antd-style';
 
+const greetingLogoEnter = keyframes`
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+`;
+
+const greetingAvatarEnter = keyframes`
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+`;
+
+const greetingTitleEnter = keyframes`
+  from { opacity: 0; }
+  to { opacity: 1; }
+`;
+
+const greetingTextEnter = keyframes`
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+`;
+
 const completionSlideUp = keyframes`
   from {
     opacity: 0;
@@ -14,6 +52,25 @@ const completionSlideUp = keyframes`
 export const staticStyle = createStaticStyles(({ css, cssVar }) => ({
   completionEnter: css`
     animation: ${completionSlideUp} 0.5s ease-out both;
+  `,
+  greetingAvatarAnimated: css`
+    animation: ${greetingAvatarEnter} 350ms ease-out 200ms both;
+  `,
+  greetingCard: css`
+    padding: 20px;
+    border: 1px solid ${cssVar.colorBorderSecondary};
+    border-radius: 16px;
+    background: ${cssVar.colorFillQuaternary};
+  `,
+  greetingLogo: css`
+    filter: drop-shadow(0 4px 24px ${cssVar.colorPrimary}33);
+    animation: ${greetingLogoEnter} 400ms ease-out both;
+  `,
+  greetingTextAnimated: css`
+    animation: ${greetingTextEnter} 400ms ease-out 500ms both;
+  `,
+  greetingTitleAnimated: css`
+    animation: ${greetingTitleEnter} 250ms ease 350ms both;
   `,
   composerZone: css`
     gap: 8px;
