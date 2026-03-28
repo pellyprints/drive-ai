@@ -38,15 +38,6 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
     backdrop-filter: blur(16px) saturate(1.2);
     box-shadow: ${cssVar.boxShadowSecondary};
   `,
-  segmentedGlass: css`
-    padding: 4px;
-    border: 1px solid color-mix(in srgb, ${cssVar.colorBorderSecondary} 60%, transparent);
-    border-radius: 999px;
-
-    background: color-mix(in srgb, ${cssVar.colorBgElevated} 75%, transparent);
-    backdrop-filter: blur(16px) saturate(1.2);
-    box-shadow: ${cssVar.boxShadowSecondary};
-  `,
 }));
 
 interface ModeSwitchProps {
@@ -100,7 +91,7 @@ const ModeSwitch = memo<ModeSwitchProps>(({ actions, className, showLabel = fals
           {segmented}
         </div>
       ) : (
-        <div className={styles.segmentedGlass}>{segmented}</div>
+        segmented
       )}
     </Flexbox>
   );
