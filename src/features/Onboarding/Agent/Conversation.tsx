@@ -5,7 +5,8 @@ import { LogoThree } from '@lobehub/ui/brand';
 import { cx } from 'antd-style';
 import { LogIn } from 'lucide-react';
 import type { CSSProperties } from 'react';
-import { memo, useMemo } from 'react';
+import { memo, useEffect, useMemo, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 
 import type { ActionKeys } from '@/features/ChatInput';
@@ -55,10 +56,30 @@ const AgentOnboardingConversation = memo<AgentOnboardingConversationProps>(
       return assistantLikeRoles.has(first.role);
     }, [displayMessages]);
 
+    const [showGreeting, setShowGreeting] = useState(isGreetingState);
+    const prevGreetingRef = useRef(isGreetingState);
+
+    useEffect(() => {
+      if (prevGreetingRef.current && !isGreetingState) {
+        if (document.startViewTransition) {
+          document.startViewTransition(() => {
+            // eslint-disable-next-line @eslint-react/dom/no-flush-sync
+            flushSync(() => setShowGreeting(false));
+          });
+        } else {
+          setShowGreeting(false);
+        }
+      }
+      if (!prevGreetingRef.current && isGreetingState) {
+        setShowGreeting(true);
+      }
+      prevGreetingRef.current = isGreetingState;
+    }, [isGreetingState]);
+
     const itemContent = (index: number, id: string) => {
       const isLatestItem = displayMessages.length === index + 1;
 
-      if (isGreetingState && index === 0) {
+      if (showGreeting && index === 0) {
         const message = displayMessages[0];
         return (
           <Flexbox align={'center'} justify={'center'} style={greetingCenterStyle}>
@@ -127,7 +148,12 @@ const AgentOnboardingConversation = memo<AgentOnboardingConversationProps>(
     };
 
     return (
-      <Flexbox flex={1} style={outerContainerStyle} width={'100%'}>
+      <Flexbox
+        className={staticStyle.viewTransitionGreeting}
+        flex={1}
+        style={outerContainerStyle}
+        width={'100%'}
+      >
         <Flexbox flex={1} style={scrollContainerStyle} width={'100%'}>
           <ChatList itemContent={itemContent} />
         </Flexbox>

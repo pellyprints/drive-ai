@@ -98,4 +98,37 @@ export const staticStyle = createStaticStyles(({ css, cssVar }) => ({
     padding-block-start: 12px;
     border-block-start: 1px solid ${cssVar.colorBorderSecondary};
   `,
+  viewTransitionGreeting: css`
+    ::view-transition-old(greeting-container) {
+      animation: 350ms cubic-bezier(0.4, 0, 0.2, 1) both fade-out;
+    }
+
+    ::view-transition-new(greeting-container) {
+      animation: 350ms cubic-bezier(0.4, 0, 0.2, 1) both fade-in;
+    }
+
+    @keyframes fade-out {
+      from {
+        transform: scale(1);
+        opacity: 1;
+      }
+
+      to {
+        transform: scale(0.97);
+        opacity: 0;
+      }
+    }
+
+    @keyframes fade-in {
+      from {
+        transform: scale(0.97);
+        opacity: 0;
+      }
+
+      to {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+  `,
 }));
