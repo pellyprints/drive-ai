@@ -1,6 +1,8 @@
 'use client';
 
 import { Avatar, Button, Flexbox, FluentEmoji, Markdown, Text } from '@lobehub/ui';
+import { LogoThree } from '@lobehub/ui/brand';
+import { cx } from 'antd-style';
 import { LogIn } from 'lucide-react';
 import type { CSSProperties } from 'react';
 import { memo, useMemo } from 'react';
@@ -39,6 +41,7 @@ const scrollContainerStyle: CSSProperties = {
   position: 'relative',
 };
 const completionTitleStyle: CSSProperties = { fontSize: 18, fontWeight: 600 };
+const greetingContainerVT: CSSProperties = { viewTransitionName: 'greeting-container' };
 
 const AgentOnboardingConversation = memo<AgentOnboardingConversationProps>(
   ({ finishTargetUrl, onboardingFinished, readOnly }) => {
@@ -59,22 +62,32 @@ const AgentOnboardingConversation = memo<AgentOnboardingConversationProps>(
         const message = displayMessages[0];
         return (
           <Flexbox align={'center'} justify={'center'} style={greetingCenterStyle}>
-            <Flexbox className={staticStyle.greetingWrap} gap={16}>
-              <Flexbox horizontal align={'flex-start'} gap={12}>
-                <Avatar
-                  avatar={agentMeta.avatar}
-                  background={agentMeta.backgroundColor}
-                  className={staticStyle.greetingAvatar}
-                  shape={'square'}
-                  size={36}
-                />
-                <Flexbox gap={4}>
-                  <Text style={agentTitleStyle} type={'secondary'}>
-                    {agentMeta.title}
-                  </Text>
-                  <Markdown className={staticStyle.greetingText} variant={'chat'}>
-                    {message.content}
-                  </Markdown>
+            <Flexbox align={'center'} className={staticStyle.greetingWrap} gap={24}>
+              <LogoThree className={staticStyle.greetingLogo} size={64} />
+              <Flexbox className={cx(staticStyle.greetingCard)} style={greetingContainerVT}>
+                <Flexbox horizontal align={'flex-start'} gap={12}>
+                  <Avatar
+                    avatar={agentMeta.avatar}
+                    background={agentMeta.backgroundColor}
+                    className={cx(staticStyle.greetingAvatar, staticStyle.greetingAvatarAnimated)}
+                    shape={'square'}
+                    size={36}
+                  />
+                  <Flexbox gap={4}>
+                    <Text
+                      className={staticStyle.greetingTitleAnimated}
+                      style={agentTitleStyle}
+                      type={'secondary'}
+                    >
+                      {agentMeta.title}
+                    </Text>
+                    <Markdown
+                      className={cx(staticStyle.greetingText, staticStyle.greetingTextAnimated)}
+                      variant={'chat'}
+                    >
+                      {message.content}
+                    </Markdown>
+                  </Flexbox>
                 </Flexbox>
               </Flexbox>
             </Flexbox>
