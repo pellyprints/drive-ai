@@ -1,2 +1,3 @@
 -- Custom SQL migration file, put your code below! --
-CREATE EXTENSION IF NOT EXISTS pg_search;
+-- pg_search not available on Supabase free tier, skipped for Drive AI
+-- CREATE EXTENSION IF NOT EXISTS pg_search;
