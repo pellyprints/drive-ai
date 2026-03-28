@@ -1,5 +1,5 @@
 {
-  "buildCommand": "bun run build:vercel",
+  "buildCommand": "NODE_OPTIONS=--max-old-space-size=4096 next build && pnpm db:migrate",
   "headers": [
     {
       "source": "/spa/assets/(.*)",
