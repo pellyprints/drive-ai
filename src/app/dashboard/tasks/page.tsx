@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
+import { useRealtimeRefresh } from '../use-realtime';
+
 interface Todo {
   created_at: string;
   description: string | null;
@@ -35,6 +37,8 @@ export default function TasksPage() {
   useEffect(() => {
     loadTodos();
   }, [loadTodos]);
+
+  useRealtimeRefresh(loadTodos);
 
   const createTodo = async () => {
     if (!newTitle.trim()) return;
