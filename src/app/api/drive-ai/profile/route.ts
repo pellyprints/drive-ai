@@ -47,6 +47,9 @@ export async function PUT(request: NextRequest) {
   // joke_played can only go false -> true, never back
   if (body.joke_played === true) updates.jokePlayed = true;
 
+  // joke_state: not_started -> setup_delivered -> waiting_response -> completed
+  if (body.joke_state !== undefined) updates.jokeState = body.joke_state;
+
   // first_use_date is IMMUTABLE — ignore if provided
 
   const [profile] = await db

@@ -155,6 +155,7 @@ export const driveUserProfiles = pgTable(
     preferences: jsonb('preferences').$type<Record<string, any>>().default({}),
     onboardingComplete: boolean('onboarding_complete').default(false),
     jokePlayed: boolean('joke_played').default(false),
+    jokeState: text('joke_state').default('not_started'),
     pushSubscription: jsonb('push_subscription'),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
