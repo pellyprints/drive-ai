@@ -63,6 +63,32 @@ export default function CalendarPage() {
     load();
   }, [unlocked]);
 
+  const [showUnlockBanner, setShowUnlockBanner] = useState(false);
+
+  // Show one-time unlock announcement
+  useEffect(() => {
+    if (!unlocked) return;
+    async function checkAnnouncement() {
+      try {
+        const res = await fetch('/api/drive-ai/profile');
+        if (!res.ok) return;
+        const profile = await res.json();
+        if (!profile.calendar_unlocked_seen) {
+          setShowUnlockBanner(true);
+          // Mark as seen
+          fetch('/api/drive-ai/profile', {
+            body: JSON.stringify({ calendar_unlocked_seen: true }),
+            headers: { 'Content-Type': 'application/json' },
+            method: 'PUT',
+          });
+        }
+      } catch {
+        // Skip
+      }
+    }
+    checkAnnouncement();
+  }, [unlocked]);
+
   if (unlocked === null) return <div style={{ color: '#64748b', padding: 40 }}>Loading...</div>;
 
   if (!unlocked) {
@@ -81,6 +107,40 @@ export default function CalendarPage() {
 
   return (
     <div>
+      {showUnlockBanner && (
+        <div
+          style={{
+            background: '#1e293b',
+            border: '1px solid #6366f1',
+            borderRadius: 12,
+            marginBottom: 24,
+            padding: '16px 20px',
+          }}
+        >
+          <div style={{ alignItems: 'center', display: 'flex', gap: 12 }}>
+            <span style={{ fontSize: 24 }}>&#x1F389;</span>
+            <div>
+              <div style={{ fontSize: 16, fontWeight: 600 }}>Calendar Unlocked!</div>
+              <div style={{ color: '#94a3b8', fontSize: 13, marginTop: 4 }}>
+                You&apos;ve been using Drive AI for a day. Your calendar features are now available.
+              </div>
+            </div>
+            <button
+              style={{
+                background: 'none',
+                border: 'none',
+                color: '#64748b',
+                cursor: 'pointer',
+                fontSize: 18,
+                marginLeft: 'auto',
+              }}
+              onClick={() => setShowUnlockBanner(false)}
+            >
+              x
+            </button>
+          </div>
+        </div>
+      )}
       <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 24 }}>Calendar</h1>
 
       <div style={{ display: 'grid', gap: 24, gridTemplateColumns: '1fr 1fr' }}>
