@@ -5,6 +5,7 @@ import { ChatErrorType } from '@lobechat/types';
 import { checkAuth } from '@/app/(backend)/middleware/auth';
 import { createTraceOptions, initModelRuntimeFromDB } from '@/server/modules/ModelRuntime';
 import { type ChatStreamPayload } from '@/types/openai/chat';
+import { buildSystemPrompt } from '@/utils/drive-ai/system-prompt-builder';
 import { createErrorResponse } from '@/utils/errorResponse';
 import { getTracePayload } from '@/utils/trace';
 
@@ -30,6 +31,23 @@ export const POST = checkAuth(
       // ============  2. create chat completion   ============ //
 
       const data = (await req.json()) as ChatStreamPayload;
+
+      // ============  Drive AI: inject dynamic system prompt  ============ //
+      try {
+        const drivePrompt = await buildSystemPrompt(userId);
+        if (drivePrompt && data.messages?.length > 0) {
+          // Prepend Drive AI context to the first system message, or add one
+          const firstMsg = data.messages[0];
+          if (firstMsg?.role === 'system') {
+            firstMsg.content = drivePrompt + '\n\n' + (firstMsg.content || '');
+          } else {
+            data.messages.unshift({ content: drivePrompt, role: 'system' });
+          }
+        }
+      } catch (e) {
+        // Non-blocking — if prompt building fails, proceed with default
+        console.warn('[Drive AI] System prompt build failed:', e);
+      }
 
       const tracePayload = getTracePayload(req);
 
