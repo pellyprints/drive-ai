@@ -1,5 +1,5 @@
 {
-  "buildCommand": "bun run build:vercel",
+  "buildCommand": "cross-env-shell NODE_OPTIONS=--max-old-space-size=6144 bun run build:raw",
   "headers": [
     {
       "source": "/spa/assets/(.*)",
