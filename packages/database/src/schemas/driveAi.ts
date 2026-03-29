@@ -156,6 +156,7 @@ export const driveUserProfiles = pgTable(
     onboardingComplete: boolean('onboarding_complete').default(false),
     jokePlayed: boolean('joke_played').default(false),
     jokeState: text('joke_state').default('not_started'),
+    calendarUnlockedSeen: boolean('calendar_unlocked_seen').default(false),
     pushSubscription: jsonb('push_subscription'),
     createdAt: createdAt(),
     updatedAt: updatedAt(),

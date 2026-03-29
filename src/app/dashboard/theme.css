@@ -1,0 +1,18 @@
+:root {
+  --drive-bg-primary: #0f172a;
+  --drive-bg-secondary: #1e293b;
+  --drive-bg-tertiary: #334155;
+  --drive-accent: #6366f1;
+  --drive-accent-hover: #818cf8;
+  --drive-text-primary: #e2e8f0;
+  --drive-text-secondary: #94a3b8;
+  --drive-text-muted: #64748b;
+  --drive-border: #1e293b;
+  --drive-success: #22c55e;
+  --drive-warning: #f59e0b;
+  --drive-error: #ef4444;
+  --drive-glass: rgba(30, 41, 59, 0.6);
+  --drive-glass-blur: blur(12px);
+  --drive-radius: 8px;
+  --drive-radius-lg: 12px;
+}

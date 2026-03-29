@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 interface Reminder {
   created_at: string;
@@ -21,8 +21,33 @@ interface Todo {
 export default function CalendarPage() {
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [dueTodos, setDueTodos] = useState<Todo[]>([]);
+  const [unlocked, setUnlocked] = useState<boolean | null>(null);
+
+  const checkUnlock = useCallback(async () => {
+    try {
+      const res = await fetch('/api/drive-ai/profile');
+      if (!res.ok) return;
+      const profile = await res.json();
+      if (!profile.first_use_date) {
+        setUnlocked(false);
+        return;
+      }
+      const firstUse = new Date(profile.first_use_date);
+      const today = new Date();
+      firstUse.setHours(0, 0, 0, 0);
+      today.setHours(0, 0, 0, 0);
+      setUnlocked(today > firstUse);
+    } catch {
+      setUnlocked(false);
+    }
+  }, []);
 
   useEffect(() => {
+    checkUnlock();
+  }, [checkUnlock]);
+
+  useEffect(() => {
+    if (!unlocked) return;
     async function load() {
       try {
         const [rem, todos] = await Promise.all([
@@ -36,7 +61,23 @@ export default function CalendarPage() {
       }
     }
     load();
-  }, []);
+  }, [unlocked]);
+
+  if (unlocked === null) return <div style={{ color: '#64748b', padding: 40 }}>Loading...</div>;
+
+  if (!unlocked) {
+    return (
+      <div style={{ padding: 40, textAlign: 'center' }}>
+        <div style={{ color: '#64748b', fontSize: 48, marginBottom: 16 }}>&#x1F512;</div>
+        <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 8 }}>
+          Calendar Unlocks Tomorrow
+        </h1>
+        <p style={{ color: '#94a3b8', fontSize: 14 }}>
+          Use Drive AI for one day and your calendar features will unlock automatically.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div>

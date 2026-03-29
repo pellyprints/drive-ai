@@ -1,5 +1,7 @@
 'use client';
 
+import './theme.css';
+
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { type ReactNode } from 'react';
