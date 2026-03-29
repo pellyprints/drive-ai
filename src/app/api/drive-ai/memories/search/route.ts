@@ -18,8 +18,21 @@ export async function POST(request: NextRequest) {
 
   const limit = body.limit || 10;
 
-  // Text-based search fallback (ILIKE) until embeddings are generated
-  // When embeddings are available, this will use cosine similarity via pgvector
+  // Multi-word search: split query into words and match any word (OR logic)
+  // Supabase free tier doesn't have ai.embed — using text search as fallback
+  // TODO: Upgrade to pgvector cosine similarity when Supabase Pro or external embeddings
+  const words = body.query
+    .trim()
+    .split(/\s+/)
+    .filter((w: string) => w.length > 2);
+  const searchCondition =
+    words.length > 0
+      ? sql`(${sql.join(
+          words.map((w: string) => sql`${driveMemories.content} ILIKE ${'%' + w + '%'}`),
+          sql` OR `,
+        )})`
+      : sql`${driveMemories.content} ILIKE ${'%' + body.query + '%'}`;
+
   const rows = await db
     .select({
       category: driveMemories.category,
@@ -30,12 +43,7 @@ export async function POST(request: NextRequest) {
       memoryType: driveMemories.memoryType,
     })
     .from(driveMemories)
-    .where(
-      and(
-        eq(driveMemories.userId, user.id),
-        sql`${driveMemories.content} ILIKE ${'%' + body.query + '%'}`,
-      ),
-    )
+    .where(and(eq(driveMemories.userId, user.id), searchCondition))
     .orderBy(desc(driveMemories.createdAt))
     .limit(limit);
 
