@@ -1,5 +1,5 @@
 {
-  "buildCommand": "cross-env-shell NODE_OPTIONS=--max-old-space-size=6144 bun run build:raw",
+  "buildCommand": "bun run build:spa:raw && bun run build:spa:copy && NODE_OPTIONS=--max-old-space-size=7168 next build",
   "headers": [
     {
       "source": "/spa/assets/(.*)",
