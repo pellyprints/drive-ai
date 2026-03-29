@@ -7,6 +7,7 @@ import { memo, useCallback } from 'react';
 
 import { MESSAGE_ACTION_BAR_PORTAL_ATTRIBUTES } from '@/const/messageActionPortal';
 import { ChatItem } from '@/features/Conversation/ChatItem';
+import { useAutoPlayTTS } from '@/hooks/useAutoPlayTTS';
 import { useUserStore } from '@/store/user';
 import { userGeneralSettingsSelectors } from '@/store/user/selectors';
 
@@ -58,6 +59,9 @@ const AssistantMessage = memo<AssistantMessageProps>(({ id, index, disableEditin
   // Get editing and generating state from ConversationStore
   const editing = useConversationStore(messageStateSelectors.isMessageEditing(id));
   const generating = useConversationStore(messageStateSelectors.isMessageGenerating(id));
+
+  // Auto-play TTS when generation finishes
+  useAutoPlayTTS(id, content, generating, !!error);
 
   const errorContent = useErrorContent(error);
 

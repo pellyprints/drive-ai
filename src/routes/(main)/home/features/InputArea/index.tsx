@@ -18,7 +18,7 @@ import SkillInstallBanner from './SkillInstallBanner';
 import StarterList from './StarterList';
 import { useSend } from './useSend';
 
-const leftActions: ActionKeys[] = ['model', 'search', 'fileUpload', 'tools'];
+const leftActions: ActionKeys[] = ['stt', 'search', 'fileUpload', 'tools'];
 
 const InputArea = () => {
   const { loading, send, inboxAgentId } = useSend();

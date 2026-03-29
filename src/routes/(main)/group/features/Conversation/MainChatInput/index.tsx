@@ -9,7 +9,7 @@ import { useChatStore } from '@/store/chat';
 import { useSendMenuItems } from './useSendMenuItems';
 
 const leftActions: ActionKeys[] = [
-  'model',
+  'stt',
   'search',
   'memory',
   'fileUpload',
