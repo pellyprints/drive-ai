@@ -1,5 +1,6 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 interface Stats {
@@ -28,6 +29,7 @@ function StatCard({ label, value }: { label: string; value: number }) {
 }
 
 export default function DashboardOverview() {
+  const router = useRouter();
   const [stats, setStats] = useState<Stats>({
     decisions: 0,
     memories: 0,
@@ -35,6 +37,24 @@ export default function DashboardOverview() {
     projects: 0,
     upcomingReminders: 0,
   });
+
+  // Check if onboarding is needed — redirect to /onboarding if not complete
+  useEffect(() => {
+    async function checkOnboarding() {
+      try {
+        const res = await fetch('/api/drive-ai/profile');
+        if (res.ok) {
+          const profile = await res.json();
+          if (!profile.onboarding_complete) {
+            router.push('/onboarding');
+          }
+        }
+      } catch {
+        // Profile API not ready — skip redirect
+      }
+    }
+    checkOnboarding();
+  }, [router]);
 
   useEffect(() => {
     async function load() {
