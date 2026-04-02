@@ -156,6 +156,7 @@
   },
   "overrides": {
     "@types/react": "19.2.13",
+    "axios": "1.14.0",
     "better-auth": "1.4.6",
     "better-call": "1.1.8",
     "drizzle-orm": "^0.45.1",
@@ -533,6 +534,7 @@
     ],
     "overrides": {
       "@types/react": "19.2.13",
+      "axios": "1.14.0",
       "better-auth": "1.4.6",
       "better-call": "1.1.8",
       "drizzle-orm": "^0.45.1",
