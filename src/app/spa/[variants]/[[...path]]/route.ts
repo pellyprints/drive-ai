@@ -95,7 +95,9 @@ async function getTemplate(isMobile: boolean): Promise<string> {
 
   const { desktopHtmlTemplate, mobileHtmlTemplate } = await import('./spaHtmlTemplates');
 
-  return isMobile ? mobileHtmlTemplate : desktopHtmlTemplate;
+  // Drive AI: always serve desktop SPA (responsive). Mobile CDN template is LobeHub-branded.
+  void isMobile;
+  return desktopHtmlTemplate;
 }
 
 function buildAnalyticsConfig(): AnalyticsConfig {
