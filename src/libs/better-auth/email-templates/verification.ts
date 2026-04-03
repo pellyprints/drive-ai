@@ -95,14 +95,14 @@ export const getVerificationEmailTemplate = (params: {
     <!-- Footer -->
     <div style="text-align: center; margin-top: 32px;">
       <p style="color: #a1a1aa; font-size: 13px; margin: 0;">
-        © 2026 LobeHub. All rights reserved.
+        © ${new Date().getFullYear()} Pelly Enterprises. All rights reserved.
       </p>
     </div>
   </div>
 </body>
 </html>
     `,
-    subject: 'Verify Your Email - LobeHub',
+    subject: 'Verify Your Email - Drive AI',
     text: `Please verify your email by clicking this link: ${url}\n\nThis link will expire in ${expirationText}.`,
   };
 };

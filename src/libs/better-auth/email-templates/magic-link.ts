@@ -85,14 +85,14 @@ export const getMagicLinkEmailTemplate = (params: { expiresInSeconds: number; ur
     <!-- Footer -->
     <div style="text-align: center; margin-top: 32px;">
       <p style="color: #a1a1aa; font-size: 13px; margin: 0;">
-        © ${new Date().getFullYear()} LobeHub. All rights reserved.
+        © ${new Date().getFullYear()} Pelly Enterprises. All rights reserved.
       </p>
     </div>
   </div>
 </body>
 </html>
     `,
-    subject: 'Your LobeHub sign-in link',
+    subject: 'Your Drive AI sign-in link',
     text: `Use this link to sign in: ${url}\n\nThis link expires in ${expirationText}.`,
   };
 };

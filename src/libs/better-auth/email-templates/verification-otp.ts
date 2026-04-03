@@ -93,14 +93,14 @@ export const getVerificationOTPEmailTemplate = (params: {
     <!-- Footer -->
     <div style="text-align: center; margin-top: 32px;">
       <p style="color: #a1a1aa; font-size: 13px; margin: 0;">
-        © 2026 LobeHub. All rights reserved.
+        © ${new Date().getFullYear()} Pelly Enterprises. All rights reserved.
       </p>
     </div>
   </div>
 </body>
 </html>
     `,
-    subject: 'Verify Your Email - LobeHub',
+    subject: 'Verify Your Email - Drive AI',
     text: `Your verification code is: ${otp}\n\nThis code will expire in ${expirationText}.\n\nIf you didn't request this code, you can safely ignore this email.`,
   };
 };

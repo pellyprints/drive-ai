@@ -95,14 +95,14 @@ export const getChangeEmailVerificationTemplate = (params: {
     <!-- Footer -->
     <div style="text-align: center; margin-top: 32px;">
       <p style="color: #a1a1aa; font-size: 13px; margin: 0;">
-        © 2026 LobeHub. All rights reserved.
+        © ${new Date().getFullYear()} Pelly Enterprises. All rights reserved.
       </p>
     </div>
   </div>
 </body>
 </html>
     `,
-    subject: 'Confirm Your New Email - LobeHub',
-    text: `You requested to change your LobeHub account email. Please confirm by clicking this link: ${url}\n\nThis link will expire in ${expirationText}.\n\nIf you didn't request this change, you can safely ignore this email.`,
+    subject: 'Confirm Your New Email - Drive AI',
+    text: `You requested to change your Drive AI account email. Please confirm by clicking this link: ${url}\n\nThis link will expire in ${expirationText}.\n\nIf you didn't request this change, you can safely ignore this email.`,
   };
 };
