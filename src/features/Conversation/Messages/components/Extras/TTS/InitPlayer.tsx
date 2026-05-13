@@ -8,6 +8,7 @@ import { useFileStore } from '@/store/file';
 
 import { useConversationStore } from '../../../../store';
 import Player from './Player';
+import { unlockIOSAudio } from './unlockIOSAudio';
 
 export interface TTSProps extends ChatTTS {
   content: string;
@@ -63,6 +64,7 @@ const InitPlayer = memo<TTSProps>(({ id, content, contentMd5, file }) => {
 
   const handleInitStart = useCallback(() => {
     if (isStart) return;
+    void unlockIOSAudio();
     start();
     setIsStart(true);
   }, [isStart, start]);
@@ -75,6 +77,7 @@ const InitPlayer = memo<TTSProps>(({ id, content, contentMd5, file }) => {
 
   const handleRetry = useCallback(() => {
     setError(undefined);
+    void unlockIOSAudio();
     start();
   }, [start]);
 
