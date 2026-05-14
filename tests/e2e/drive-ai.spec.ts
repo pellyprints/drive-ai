@@ -118,12 +118,6 @@ test.describe('API Routes Respond', () => {
     console.log(`[EXTRACT] Route status: ${res.status()}`);
     expect(res.status()).not.toBe(404);
   });
-
-  test('joke route exists', async ({ request }) => {
-    const res = await request.get(`${BASE_URL}/api/drive-ai/joke`);
-    console.log(`[JOKE] Route status: ${res.status()}`);
-    expect(res.status()).not.toBe(404);
-  });
 });
 
 // ==================== 4. DASHBOARD PAGES ====================

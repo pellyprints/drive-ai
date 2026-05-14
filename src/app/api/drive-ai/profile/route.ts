@@ -44,12 +44,6 @@ export async function PUT(request: NextRequest) {
   if (body.onboarding_complete !== undefined) updates.onboardingComplete = body.onboarding_complete;
   if (body.push_subscription !== undefined) updates.pushSubscription = body.push_subscription;
 
-  // joke_played can only go false -> true, never back
-  if (body.joke_played === true) updates.jokePlayed = true;
-
-  // joke_state: not_started -> setup_delivered -> waiting_response -> completed
-  if (body.joke_state !== undefined) updates.jokeState = body.joke_state;
-
   // calendar_unlocked_seen: set true when Day 2 unlock announcement is shown
   if (body.calendar_unlocked_seen === true) updates.calendarUnlockedSeen = true;
 
